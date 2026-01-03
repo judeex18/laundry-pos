@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Container,
@@ -8,13 +8,16 @@ import {
   ThemeProvider,
   createTheme,
   CssBaseline,
+  Button,
 } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
+import LogoutIcon from "@mui/icons-material/Logout";
 import POS from "./POS";
 import OrderBoard from "./OrderBoard";
 import DailyReport from "./DailyReport";
+import LandingPage from "./LandingPage";
 
 // Custom theme with Ian's Laundry Hub colors (Blue & Gold theme)
 const theme = createTheme({
@@ -122,6 +125,10 @@ const theme = createTheme({
 });
 
 function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem("isLoggedIn") === "true";
+  });
+
   const [page, setPage] = useState(() => {
     // Restore the last visited tab from localStorage
     return localStorage.getItem("currentTab") || "pos";
@@ -131,6 +138,26 @@ function App() {
     setPage(newPage);
     localStorage.setItem("currentTab", newPage);
   };
+
+  const handleLogin = () => {
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("userRole");
+    setIsLoggedIn(false);
+  };
+
+  // Show landing page if not logged in
+  if (!isLoggedIn) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <LandingPage onLogin={handleLogin} />
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider theme={theme}>
@@ -266,6 +293,27 @@ function App() {
                   value="report"
                 />
               </Tabs>
+
+              {/* Logout Button */}
+              <Button
+                variant="outlined"
+                startIcon={<LogoutIcon />}
+                onClick={handleLogout}
+                sx={{
+                  ml: { xs: 1, sm: 2 },
+                  color: "white",
+                  borderColor: "rgba(255,255,255,0.5)",
+                  fontSize: { xs: "0.7rem", sm: "0.85rem" },
+                  px: { xs: 1, sm: 2 },
+                  minWidth: { xs: "auto", sm: 100 },
+                  "&:hover": {
+                    borderColor: "white",
+                    bgcolor: "rgba(255,255,255,0.1)",
+                  },
+                }}
+              >
+                <Box sx={{ display: { xs: "none", sm: "block" } }}>Logout</Box>
+              </Button>
             </Box>
           </Container>
         </Paper>

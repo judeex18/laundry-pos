@@ -276,6 +276,22 @@ export default function OrderBoard() {
                   </Box>
 
                   <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                    {/* Receipt Number */}
+                    {order.receiptNumber && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: "block",
+                          mb: 1,
+                          color: "primary.main",
+                          fontWeight: 600,
+                          fontSize: { xs: "0.7rem", sm: "0.75rem" },
+                        }}
+                      >
+                        📋 {order.receiptNumber}
+                      </Typography>
+                    )}
+
                     {/* Customer Info */}
                     <Stack spacing={1} sx={{ mb: 2 }}>
                       <Box
@@ -471,6 +487,19 @@ export default function OrderBoard() {
                         alignItems="center"
                       >
                         <Box>
+                          {order.receiptNumber && (
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                display: "block",
+                                color: "primary.main",
+                                fontWeight: 600,
+                                fontSize: { xs: "0.65rem", sm: "0.7rem" },
+                              }}
+                            >
+                              📋 {order.receiptNumber}
+                            </Typography>
+                          )}
                           <Typography
                             fontWeight={600}
                             sx={{ fontSize: { xs: "0.85rem", sm: "1rem" } }}

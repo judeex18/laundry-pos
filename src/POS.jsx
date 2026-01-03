@@ -149,11 +149,11 @@ export default function POS() {
     };
 
     try {
-      await createOrder(orderData);
-      setReceipt(orderData);
+      const result = await createOrder(orderData);
+      setReceipt({ ...orderData, receiptNumber: result.receiptNumber });
       setSnackbar({
         open: true,
-        message: "Order saved successfully!",
+        message: `Order saved! Receipt #${result.receiptNumber}`,
         severity: "success",
       });
       resetPOS();

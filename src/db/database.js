@@ -8,9 +8,10 @@ import Dexie from "dexie";
 const db = new Dexie("LaundryPOS");
 
 // Define schema - increment version to force update
-db.version(2).stores({
+db.version(3).stores({
   services: "++id, name, price, active",
-  orders: "++id, status, customerName, phone, total, paymentMethod, createdAt",
+  orders:
+    "++id, receiptNumber, status, customerName, phone, total, paymentMethod, createdAt",
 });
 
 // Default services list
@@ -90,8 +91,35 @@ export const deleteService = async (id) => {
 // =====================
 // ORDERS OPERATIONS
 // =====================
+
+// Generate unique receipt number
+const generateReceiptNumber = async () => {
+  const today = new Date();
+  const datePrefix = `${today.getFullYear()}${String(
+    today.getMonth() + 1
+  ).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
+
+  // Get count of orders for today
+  const allOrders = await db.orders.toArray();
+  const todayOrders = allOrders.filter((order) => {
+    const orderDate = new Date(order.createdAt);
+    return (
+      orderDate.getFullYear() === today.getFullYear() &&
+      orderDate.getMonth() === today.getMonth() &&
+      orderDate.getDate() === today.getDate()
+    );
+  });
+
+  const orderNum = String(todayOrders.length + 1).padStart(3, "0");
+  return `ORD-${datePrefix}-${orderNum}`;
+};
+
+import { syncOrderToSupabase } from "./supabase";
+
 export const createOrder = async (orderData) => {
+  const receiptNumber = await generateReceiptNumber();
   const order = {
+    receiptNumber,
     customerName: orderData.customer,
     phone: orderData.phone,
     items: orderData.items,
@@ -100,7 +128,14 @@ export const createOrder = async (orderData) => {
     status: "Received",
     createdAt: new Date().toISOString(),
   };
-  return await db.orders.add(order);
+  const id = await db.orders.add(order);
+
+  // Sync to Supabase (non-blocking)
+  syncOrderToSupabase(order).catch(() => {
+    console.log("⚠️ Supabase sync failed, order saved locally");
+  });
+
+  return { id, receiptNumber };
 };
 
 export const getOrders = async () => {
@@ -112,7 +147,41 @@ export const getOrdersByStatus = async (status) => {
 };
 
 export const updateOrderStatus = async (id, status) => {
-  return await db.orders.update(id, { status });
+  const result = await db.orders.update(id, { status });
+
+  // Get the updated order and sync to Supabase
+  const order = await db.orders.get(id);
+  if (order) {
+    syncOrderToSupabase(order).catch(() => {
+      console.log("⚠️ Status sync failed, updated locally");
+    });
+  }
+
+  return result;
+};
+
+// Track order by receipt number (for customer tracking)
+export const trackOrder = async (receiptNumber) => {
+  // Try exact match first
+  let order = await db.orders
+    .where("receiptNumber")
+    .equals(receiptNumber)
+    .first();
+
+  // If not found, try case-insensitive search
+  if (!order) {
+    const allOrders = await db.orders.toArray();
+    order = allOrders.find(
+      (o) => o.receiptNumber?.toLowerCase() === receiptNumber.toLowerCase()
+    );
+  }
+
+  // Also try searching by ID if input is numeric
+  if (!order && !isNaN(receiptNumber)) {
+    order = await db.orders.get(parseInt(receiptNumber));
+  }
+
+  return order;
 };
 
 export const deleteOrder = async (id) => {
@@ -243,3 +312,29 @@ export const resetDatabase = async () => {
 
 // Export database instance
 export default db;
+
+// =====================
+// SYNC ALL ORDERS TO SUPABASE
+// =====================
+export const syncAllOrdersToSupabase = async () => {
+  try {
+    const orders = await db.orders.toArray();
+    let synced = 0;
+    let failed = 0;
+
+    for (const order of orders) {
+      const success = await syncOrderToSupabase(order);
+      if (success) {
+        synced++;
+      } else {
+        failed++;
+      }
+    }
+
+    console.log(`✅ Synced ${synced} orders to Supabase, ${failed} failed`);
+    return { synced, failed };
+  } catch (error) {
+    console.error("❌ Bulk sync failed:", error);
+    return { synced: 0, failed: 0, error };
+  }
+};

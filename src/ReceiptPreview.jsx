@@ -61,6 +61,30 @@ export default function ReceiptPreview({ open, onClose, data }) {
       </Box>
 
       <DialogContent sx={{ p: 3 }}>
+        {/* Receipt Number */}
+        {data.receiptNumber && (
+          <Box
+            sx={{
+              textAlign: "center",
+              mb: 2,
+              p: 1.5,
+              background: "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)",
+              borderRadius: 2,
+              color: "white",
+            }}
+          >
+            <Typography variant="caption" sx={{ opacity: 0.9 }}>
+              Receipt Number
+            </Typography>
+            <Typography variant="h6" fontWeight={700}>
+              {data.receiptNumber}
+            </Typography>
+            <Typography variant="caption" sx={{ opacity: 0.8 }}>
+              Use this to track your order status
+            </Typography>
+          </Box>
+        )}
+
         {/* Customer Info */}
         <Box
           sx={{
