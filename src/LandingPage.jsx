@@ -535,7 +535,9 @@ function LandingPage({ onLogin }) {
                             {trackingResult.items.map((item, idx) => (
                               <Chip
                                 key={idx}
-                                label={`${item.name} x${item.qty}`}
+                                label={`${item.name} x${
+                                  item.loads || item.qty || 1
+                                }`}
                                 size="small"
                                 variant="outlined"
                               />
