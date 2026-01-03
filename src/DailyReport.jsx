@@ -64,7 +64,7 @@ export default function DailyReport() {
       return "linear-gradient(135deg, #10b981 0%, #059669 100%)";
     if (method?.toLowerCase() === "gcash")
       return "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)";
-    return "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)";
+    return "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)";
   };
 
   const handleClearOrders = async () => {
@@ -179,31 +179,12 @@ export default function DailyReport() {
 
   return (
     <Box>
-      {/* Offline Mode Indicator */}
-      <Paper
-        sx={{
-          p: 1.5,
-          mb: 2,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 1,
-          background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
-          borderRadius: 2,
-        }}
-      >
-        <StorageIcon sx={{ color: "white" }} />
-        <Typography sx={{ color: "white", fontWeight: 600 }}>
-          Offline Mode - Reports from local data
-        </Typography>
-      </Paper>
-
       {/* Header Stats */}
       <Paper
         sx={{
           p: { xs: 2.5, sm: 4 },
           mb: { xs: 2, sm: 3 },
-          background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+          background: "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)",
           color: "white",
           borderRadius: { xs: 2, sm: 3 },
           position: "relative",
@@ -354,7 +335,7 @@ export default function DailyReport() {
             sx={{
               p: { xs: 2, sm: 3 },
               textAlign: "center",
-              background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+              background: "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)",
               color: "white",
               borderRadius: { xs: 2, sm: 3 },
             }}
@@ -543,9 +524,9 @@ export default function DailyReport() {
             sx={{
               textTransform: "none",
               mb: 1,
-              background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+              background: "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)",
               "&:hover": {
-                background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+                background: "linear-gradient(135deg, #2a4a8a 0%, #1e3a6e 100%)",
               },
             }}
             startIcon={<DownloadIcon />}

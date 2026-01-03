@@ -16,7 +16,6 @@ import LocalLaundryServiceIcon from "@mui/icons-material/LocalLaundryService";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import PersonIcon from "@mui/icons-material/Person";
 import PhoneIcon from "@mui/icons-material/Phone";
-import StorageIcon from "@mui/icons-material/Storage";
 import { getOrders, updateOrderStatus } from "./db/database";
 
 // Order workflow
@@ -84,7 +83,7 @@ export default function OrderBoard() {
     },
     Released: {
       color: "secondary",
-      bg: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+      bg: "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)",
       icon: "🎉",
     },
   };
@@ -127,66 +126,56 @@ export default function OrderBoard() {
   // =====================
   return (
     <Box>
-      {/* Offline Mode Indicator */}
+      {/* Status Summary Cards */}
       <Paper
         sx={{
-          p: 1.5,
-          mb: 2,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 1,
-          background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
-          borderRadius: 2,
+          p: { xs: 2, sm: 3 },
+          mb: { xs: 2, sm: 3 },
+          borderRadius: { xs: 2, sm: 3 },
+          background: "white",
         }}
       >
-        <StorageIcon sx={{ color: "white" }} />
-        <Typography sx={{ color: "white", fontWeight: 600 }}>
-          Offline Mode - Orders stored locally
-        </Typography>
+        <Grid container spacing={{ xs: 1, sm: 2 }}>
+          {STATUSES.map((status) => (
+            <Grid item xs={4} sm={2.4} key={status}>
+              <Paper
+                sx={{
+                  p: { xs: 1, sm: 2 },
+                  textAlign: "center",
+                  background: statusConfig[status].bg,
+                  color: "white",
+                  borderRadius: { xs: 2, sm: 3 },
+                }}
+              >
+                <Typography
+                  sx={{ fontSize: { xs: "1.25rem", sm: "1.75rem" }, mb: 0.5 }}
+                >
+                  {statusConfig[status].icon}
+                </Typography>
+                <Typography
+                  variant="h4"
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: { xs: "1.25rem", sm: "2rem" },
+                  }}
+                >
+                  {statusCounts[status]}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    opacity: 0.9,
+                    fontWeight: 500,
+                    fontSize: { xs: "0.6rem", sm: "0.75rem" },
+                  }}
+                >
+                  {status}
+                </Typography>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
       </Paper>
-
-      {/* Status Summary Cards */}
-      <Grid container spacing={{ xs: 1, sm: 2 }} sx={{ mb: { xs: 2, sm: 3 } }}>
-        {STATUSES.map((status) => (
-          <Grid item xs={4} sm={2.4} key={status}>
-            <Paper
-              sx={{
-                p: { xs: 1, sm: 2 },
-                textAlign: "center",
-                background: statusConfig[status].bg,
-                color: "white",
-                borderRadius: { xs: 2, sm: 3 },
-              }}
-            >
-              <Typography
-                sx={{ fontSize: { xs: "1.25rem", sm: "1.75rem" }, mb: 0.5 }}
-              >
-                {statusConfig[status].icon}
-              </Typography>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 700,
-                  fontSize: { xs: "1.25rem", sm: "2rem" },
-                }}
-              >
-                {statusCounts[status]}
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  opacity: 0.9,
-                  fontWeight: 500,
-                  fontSize: { xs: "0.6rem", sm: "0.75rem" },
-                }}
-              >
-                {status}
-              </Typography>
-            </Paper>
-          </Grid>
-        ))}
-      </Grid>
 
       {/* Orders List */}
       {orders.length === 0 ? (
@@ -440,7 +429,14 @@ export default function OrderBoard() {
 
       {/* Released Orders Section */}
       {orders.filter((o) => o.status === "Released").length > 0 && (
-        <Box sx={{ mt: { xs: 3, sm: 4 } }}>
+        <Paper
+          sx={{
+            mt: { xs: 3, sm: 4 },
+            p: { xs: 2, sm: 3 },
+            borderRadius: { xs: 2, sm: 3 },
+            background: "white",
+          }}
+        >
           <Typography
             variant="h6"
             sx={{
@@ -448,7 +444,7 @@ export default function OrderBoard() {
               display: "flex",
               alignItems: "center",
               gap: 1,
-              color: "text.secondary",
+              color: "primary.main",
               fontSize: { xs: "0.9rem", sm: "1.1rem" },
             }}
           >
@@ -464,7 +460,6 @@ export default function OrderBoard() {
                   <Card
                     sx={{
                       borderRadius: { xs: 2, sm: 3 },
-                      opacity: 0.7,
                       background:
                         "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
                     }}
@@ -507,7 +502,7 @@ export default function OrderBoard() {
                 </Grid>
               ))}
           </Grid>
-        </Box>
+        </Paper>
       )}
     </Box>
   );

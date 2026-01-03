@@ -16,19 +16,19 @@ import POS from "./POS";
 import OrderBoard from "./OrderBoard";
 import DailyReport from "./DailyReport";
 
-// Custom theme with modern colors
+// Custom theme with Ian's Laundry Hub colors (Blue & Gold theme)
 const theme = createTheme({
   palette: {
     mode: "light",
     primary: {
-      main: "#6366f1",
-      light: "#818cf8",
-      dark: "#4f46e5",
+      main: "#375da5",
+      light: "#5a7fc7",
+      dark: "#2a4a8a",
     },
     secondary: {
-      main: "#ec4899",
-      light: "#f472b6",
-      dark: "#db2777",
+      main: "#ffbd59",
+      light: "#ffcf85",
+      dark: "#e5a63d",
     },
     success: {
       main: "#10b981",
@@ -46,11 +46,11 @@ const theme = createTheme({
       dark: "#2563eb",
     },
     background: {
-      default: "#f8fafc",
-      paper: "#ffffff",
+      default: "#f5f7fa",
+      paper: "#fff8e7",
     },
     text: {
-      primary: "#1e293b",
+      primary: "#1e3a5f",
       secondary: "#64748b",
     },
   },
@@ -80,9 +80,9 @@ const theme = createTheme({
           padding: "10px 20px",
         },
         contained: {
-          boxShadow: "0 4px 14px 0 rgba(99, 102, 241, 0.39)",
+          boxShadow: "0 4px 14px 0 rgba(55, 93, 165, 0.39)",
           "&:hover": {
-            boxShadow: "0 6px 20px rgba(99, 102, 241, 0.4)",
+            boxShadow: "0 6px 20px rgba(55, 93, 165, 0.4)",
           },
         },
       },
@@ -105,7 +105,7 @@ const theme = createTheme({
           "& .MuiOutlinedInput-root": {
             borderRadius: 10,
             "&:hover fieldset": {
-              borderColor: "#6366f1",
+              borderColor: "#375da5",
             },
           },
         },
@@ -138,14 +138,14 @@ function App() {
       <Box
         sx={{
           minHeight: "100vh",
-          background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
+          background: "linear-gradient(135deg, #ffbd59 0%, #ffcf85 100%)",
         }}
       >
         {/* Header */}
         <Paper
           elevation={0}
           sx={{
-            background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+            background: "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)",
             borderRadius: 0,
             py: { xs: 1.5, sm: 2 },
             px: { xs: 1.5, sm: 3 },

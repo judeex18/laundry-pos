@@ -15,13 +15,13 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api/],
       },
       manifest: {
-        name: "Ian's Laundry POS",
-        short_name: "Laundry POS",
-        description: "Fully Offline Point of Sale for Laundry Services",
+        name: "Ian's Laundry Hub",
+        short_name: "Ian's Laundry",
+        description: "Point of Sale for Ian's Laundry Hub",
         start_url: "/",
         display: "standalone",
         background_color: "#ffffff",
-        theme_color: "#6366f1",
+        theme_color: "#375da5",
         icons: [
           {
             src: "/IansLogo.png",

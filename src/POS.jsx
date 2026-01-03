@@ -26,7 +26,6 @@ import PersonIcon from "@mui/icons-material/Person";
 import PhoneIcon from "@mui/icons-material/Phone";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
-import StorageIcon from "@mui/icons-material/Storage";
 import ReceiptPreview from "./ReceiptPreview";
 import {
   getServices,
@@ -201,25 +200,6 @@ export default function POS() {
   // =====================
   return (
     <>
-      {/* Offline Mode Indicator */}
-      <Paper
-        sx={{
-          p: 1.5,
-          mb: 2,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 1,
-          background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
-          borderRadius: 2,
-        }}
-      >
-        <StorageIcon sx={{ color: "white" }} />
-        <Typography sx={{ color: "white", fontWeight: 600 }}>
-          Offline Mode - All data stored locally
-        </Typography>
-      </Paper>
-
       <Grid container spacing={{ xs: 2, sm: 3 }}>
         {/* Left Section - Services */}
         <Grid item xs={12} lg={7}>
@@ -563,7 +543,7 @@ export default function POS() {
                 alignItems: "center",
                 mb: 3,
                 p: { xs: 1.5, sm: 2 },
-                background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                background: "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)",
                 borderRadius: 2,
                 color: "white",
               }}

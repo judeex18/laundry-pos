@@ -132,7 +132,7 @@ export default function ReceiptPreview({ open, onClose, data }) {
                     width: 32,
                     height: 32,
                     background:
-                      "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                      "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)",
                     fontSize: "0.875rem",
                   }}
                 >
@@ -163,7 +163,7 @@ export default function ReceiptPreview({ open, onClose, data }) {
             justifyContent: "space-between",
             alignItems: "center",
             p: 2,
-            background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+            background: "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)",
             borderRadius: 2,
             color: "white",
             mb: 2,
