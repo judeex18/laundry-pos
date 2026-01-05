@@ -125,6 +125,8 @@ export const createOrder = async (orderData) => {
     items: orderData.items,
     total: orderData.total,
     paymentMethod: orderData.method,
+    gcashNumber: orderData.gcashNumber || null,
+    gcashRefNumber: orderData.gcashRefNumber || null,
     status: "Received",
     createdAt: new Date().toISOString(),
   };
@@ -147,7 +149,14 @@ export const getOrdersByStatus = async (status) => {
 };
 
 export const updateOrderStatus = async (id, status) => {
-  const result = await db.orders.update(id, { status });
+  const updateData = { status };
+
+  // Add releasedAt timestamp when order is released
+  if (status === "Released") {
+    updateData.releasedAt = new Date().toISOString();
+  }
+
+  const result = await db.orders.update(id, updateData);
 
   // Get the updated order and sync to Supabase
   const order = await db.orders.get(id);
@@ -200,11 +209,15 @@ export const getDailyReport = async () => {
   const allOrders = await db.orders.toArray();
 
   const orders = allOrders.filter((order) => {
-    const orderDate = new Date(order.createdAt);
+    if (order.status !== "Released") return false;
+
+    // Use releasedAt if available, otherwise fall back to createdAt
+    const dateToCheck = order.releasedAt || order.createdAt;
+    const orderDate = new Date(dateToCheck);
     const orderDateStr = `${orderDate.getFullYear()}-${String(
       orderDate.getMonth() + 1
     ).padStart(2, "0")}-${String(orderDate.getDate()).padStart(2, "0")}`;
-    return orderDateStr === todayStr && order.status === "Released";
+    return orderDateStr === todayStr;
   });
 
   // Group by payment method
@@ -264,12 +277,12 @@ export const getOrdersForExport = async (startDate, endDate) => {
   const orders = await db.orders.toArray();
 
   return orders.filter((order) => {
-    const orderDate = new Date(order.createdAt);
-    return (
-      orderDate >= startDate &&
-      orderDate <= endDate &&
-      order.status === "Released"
-    );
+    if (order.status !== "Released") return false;
+
+    // Use releasedAt if available, otherwise fall back to createdAt
+    const dateToCheck = order.releasedAt || order.createdAt;
+    const orderDate = new Date(dateToCheck);
+    return orderDate >= startDate && orderDate <= endDate;
   });
 };
 

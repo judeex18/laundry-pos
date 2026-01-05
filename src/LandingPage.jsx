@@ -81,14 +81,10 @@ function LandingPage({ onLogin }) {
     e.preventDefault();
     setLoginError("");
 
-    // Simple admin credentials (in production, use proper authentication)
-    if (username === "admin" && password === "admin123") {
+    // Admin credentials
+    if (username === "admin" && password === "03282023") {
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("userRole", "admin");
-      onLogin();
-    } else if (username === "staff" && password === "staff123") {
-      localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("userRole", "staff");
       onLogin();
     } else {
       setLoginError("Invalid username or password");
@@ -279,46 +275,6 @@ function LandingPage({ onLogin }) {
                   Login
                 </Button>
               </form>
-
-              <Divider sx={{ my: 3 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Demo Credentials
-                </Typography>
-              </Divider>
-
-              <Box
-                sx={{
-                  bgcolor: "grey.100",
-                  borderRadius: 2,
-                  p: 2,
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  sx={{ fontWeight: 600, mb: 1, color: "text.secondary" }}
-                >
-                  Admin Login:
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.5 }}>
-                  Username: <code>admin</code>
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 2 }}>
-                  Password: <code>admin123</code>
-                </Typography>
-
-                <Typography
-                  variant="body2"
-                  sx={{ fontWeight: 600, mb: 1, color: "text.secondary" }}
-                >
-                  Staff Login:
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.5 }}>
-                  Username: <code>staff</code>
-                </Typography>
-                <Typography variant="body2">
-                  Password: <code>staff123</code>
-                </Typography>
-              </Box>
             </Paper>
           </Grid>
 

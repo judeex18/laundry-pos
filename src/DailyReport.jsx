@@ -9,6 +9,17 @@ import {
   Divider,
   Stack,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import PaymentsIcon from "@mui/icons-material/Payments";
@@ -18,19 +29,29 @@ import StorageIcon from "@mui/icons-material/Storage";
 import DeleteIcon from "@mui/icons-material/Delete";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import DownloadIcon from "@mui/icons-material/Download";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import TableChartIcon from "@mui/icons-material/TableChart";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
   getDailyReport,
   getOrderStats,
   clearAllOrders,
   resetServices,
-  getDailyOrdersForExport,
-  getMonthlyOrdersForExport,
+  getOrdersForExport,
 } from "./db/database";
 
 export default function DailyReport() {
   const [data, setData] = useState([]);
   const [stats, setStats] = useState({ total: 0, released: 0 });
+
+  // Export dialog state
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState("excel");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const fetchReport = async () => {
     try {
@@ -49,6 +70,42 @@ export default function DailyReport() {
     const timer = setInterval(fetchReport, 5000);
     return () => clearInterval(timer);
   }, []);
+
+  // Set default dates when dialog opens
+  const handleOpenExportDialog = () => {
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0];
+    setStartDate(todayStr);
+    setEndDate(todayStr);
+    setExportDialogOpen(true);
+  };
+
+  const handleCloseExportDialog = () => {
+    setExportDialogOpen(false);
+  };
+
+  // Quick date presets
+  const setTodayDates = () => {
+    const today = new Date().toISOString().split("T")[0];
+    setStartDate(today);
+    setEndDate(today);
+  };
+
+  const setThisWeekDates = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - dayOfWeek);
+    setStartDate(startOfWeek.toISOString().split("T")[0]);
+    setEndDate(today.toISOString().split("T")[0]);
+  };
+
+  const setThisMonthDates = () => {
+    const today = new Date();
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    setStartDate(startOfMonth.toISOString().split("T")[0]);
+    setEndDate(today.toISOString().split("T")[0]);
+  };
 
   const total = data.reduce((sum, d) => sum + Number(d.total || 0), 0);
   const totalOrders = data.reduce((sum, d) => sum + Number(d.count || 0), 0);
@@ -89,92 +146,202 @@ export default function DailyReport() {
     }
   };
 
-  const exportToExcel = async (type) => {
+  // Export function
+  const handleExport = async () => {
     try {
-      const orders =
-        type === "daily"
-          ? await getDailyOrdersForExport()
-          : await getMonthlyOrdersForExport();
-
-      if (orders.length === 0) {
-        alert(
-          `No released orders found for ${
-            type === "daily" ? "today" : "this month"
-          }`
-        );
+      if (!startDate || !endDate) {
+        alert("Please select both start and end dates");
         return;
       }
 
-      // Format data for Excel
-      const excelData = orders.map((order, index) => ({
-        "No.": index + 1,
-        "Customer Name": order.customerName || "N/A",
-        "Phone Number": order.phone || "N/A",
-        Services:
-          order.items
-            ?.map((item) => `${item.name} x${item.loads || item.quantity || 1}`)
-            .join(", ") || "N/A",
-        "Total Amount": `₱${Number(order.total || 0).toLocaleString()}`,
-        "Payment Method": order.paymentMethod || "N/A",
-        Date: new Date(order.createdAt).toLocaleString(),
-      }));
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
 
-      // Calculate total revenue
-      const totalRevenue = orders.reduce(
-        (sum, order) => sum + Number(order.total || 0),
-        0
-      );
+      const orders = await getOrdersForExport(start, end);
 
-      // Add empty row and total row
-      excelData.push({});
-      excelData.push({
-        "No.": "",
-        "Customer Name": "",
-        "Phone Number": "",
-        Services: "",
-        "Total Amount": `₱${totalRevenue.toLocaleString()}`,
-        "Payment Method": "TOTAL REVENUE",
-        Date: "",
-      });
+      if (orders.length === 0) {
+        alert("No released orders found for the selected date range");
+        return;
+      }
 
-      // Create worksheet
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      if (exportFormat === "excel") {
+        exportToExcel(orders, start, end);
+      } else {
+        exportToPDF(orders, start, end);
+      }
 
-      // Set column widths
-      worksheet["!cols"] = [
-        { wch: 5 }, // No.
-        { wch: 20 }, // Customer Name
-        { wch: 15 }, // Phone Number
-        { wch: 40 }, // Services
-        { wch: 15 }, // Total Amount
-        { wch: 15 }, // Payment Method
-        { wch: 20 }, // Date
-      ];
-
-      // Create workbook
-      const workbook = XLSX.utils.book_new();
-      const sheetName = type === "daily" ? "Daily Report" : "Monthly Report";
-      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-
-      // Generate filename
-      const today = new Date();
-      const dateStr =
-        type === "daily"
-          ? today.toISOString().split("T")[0]
-          : `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
-              2,
-              "0"
-            )}`;
-      const filename = `Laundry_${
-        type === "daily" ? "Daily" : "Monthly"
-      }_Report_${dateStr}.xlsx`;
-
-      // Download file
-      XLSX.writeFile(workbook, filename);
+      handleCloseExportDialog();
     } catch (error) {
       console.error("Export failed:", error);
       alert("Failed to export report. Please try again.");
     }
+  };
+
+  const exportToExcel = (orders, start, end) => {
+    // Format data for Excel
+    const excelData = orders.map((order, index) => ({
+      "No.": index + 1,
+      "Customer Name": order.customerName || "N/A",
+      "Phone Number": order.phone || "N/A",
+      Services:
+        order.items
+          ?.map((item) => `${item.name} x${item.loads || item.quantity || 1}`)
+          .join(", ") || "N/A",
+      "Total Amount": `₱${Number(order.total || 0).toLocaleString()}`,
+      "Payment Method": order.paymentMethod || "N/A",
+      "GCash Ref#": order.gcashRefNumber || "-",
+      Date: new Date(order.releasedAt || order.createdAt).toLocaleString(),
+    }));
+
+    // Calculate total revenue
+    const totalRevenue = orders.reduce(
+      (sum, order) => sum + Number(order.total || 0),
+      0
+    );
+
+    // Add empty row and total row
+    excelData.push({});
+    excelData.push({
+      "No.": "",
+      "Customer Name": "",
+      "Phone Number": "",
+      Services: "",
+      "Total Amount": `₱${totalRevenue.toLocaleString()}`,
+      "Payment Method": "TOTAL REVENUE",
+      "GCash Ref#": "",
+      Date: "",
+    });
+
+    // Create worksheet
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+    // Set column widths
+    worksheet["!cols"] = [
+      { wch: 5 }, // No.
+      { wch: 20 }, // Customer Name
+      { wch: 15 }, // Phone Number
+      { wch: 40 }, // Services
+      { wch: 15 }, // Total Amount
+      { wch: 15 }, // Payment Method
+      { wch: 15 }, // GCash Ref#
+      { wch: 20 }, // Date
+    ];
+
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    const dateRange =
+      start.toDateString() === end.toDateString()
+        ? start.toISOString().split("T")[0]
+        : `${start.toISOString().split("T")[0]}_to_${
+            end.toISOString().split("T")[0]
+          }`;
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sales Report");
+
+    // Generate filename
+    const filename = `Laundry_Report_${dateRange}.xlsx`;
+
+    // Download file
+    XLSX.writeFile(workbook, filename);
+  };
+
+  const exportToPDF = (orders, start, end) => {
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFontSize(18);
+    doc.setTextColor(55, 93, 165);
+    doc.text("Ian's Laundry Shop", 105, 15, { align: "center" });
+
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Sales Report", 105, 23, { align: "center" });
+
+    // Date range
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    const dateRangeText =
+      start.toDateString() === end.toDateString()
+        ? `Date: ${start.toLocaleDateString()}`
+        : `Date Range: ${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
+    doc.text(dateRangeText, 105, 30, { align: "center" });
+
+    // Table data
+    const tableData = orders.map((order, index) => [
+      index + 1,
+      order.customerName || "N/A",
+      order.phone || "N/A",
+      order.items
+        ?.map((item) => `${item.name} x${item.loads || item.quantity || 1}`)
+        .join(", ") || "N/A",
+      `₱${Number(order.total || 0).toLocaleString()}`,
+      order.paymentMethod || "N/A",
+      order.gcashRefNumber || "-",
+    ]);
+
+    // Calculate total revenue
+    const totalRevenue = orders.reduce(
+      (sum, order) => sum + Number(order.total || 0),
+      0
+    );
+
+    // Add table
+    autoTable(doc, {
+      startY: 38,
+      head: [
+        [
+          "#",
+          "Customer",
+          "Phone",
+          "Services",
+          "Total",
+          "Payment",
+          "GCash Ref#",
+        ],
+      ],
+      body: tableData,
+      theme: "grid",
+      headStyles: {
+        fillColor: [55, 93, 165],
+        textColor: 255,
+        fontSize: 8,
+        fontStyle: "bold",
+      },
+      bodyStyles: {
+        fontSize: 7,
+      },
+      columnStyles: {
+        0: { cellWidth: 8 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 22 },
+        3: { cellWidth: 50 },
+        4: { cellWidth: 20 },
+        5: { cellWidth: 18 },
+        6: { cellWidth: 25 },
+      },
+      margin: { left: 10, right: 10 },
+    });
+
+    // Total summary
+    const finalY = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(12);
+    doc.setTextColor(55, 93, 165);
+    doc.setFont(undefined, "bold");
+    doc.text(`Total Revenue: ₱${totalRevenue.toLocaleString()}`, 14, finalY);
+    doc.text(`Total Orders: ${orders.length}`, 14, finalY + 7);
+
+    // Generate filename
+    const dateRange =
+      start.toDateString() === end.toDateString()
+        ? start.toISOString().split("T")[0]
+        : `${start.toISOString().split("T")[0]}_to_${
+            end.toISOString().split("T")[0]
+          }`;
+    const filename = `Laundry_Report_${dateRange}.pdf`;
+
+    // Download file
+    doc.save(filename);
   };
 
   return (
@@ -506,36 +673,150 @@ export default function DailyReport() {
             fontSize: { xs: "0.8rem", sm: "0.9rem" },
           }}
         >
-          Download reports with Customer Name, Phone Number, Services, Total
-          Amount, and Total Revenue.
+          Export reports with custom date range. Choose between Excel or PDF
+          format.
         </Typography>
-        <Stack direction="row" spacing={2} flexWrap="wrap">
-          <Button
-            variant="contained"
-            color="success"
-            startIcon={<DownloadIcon />}
-            onClick={() => exportToExcel("daily")}
-            sx={{ textTransform: "none", mb: 1 }}
+        <Button
+          variant="contained"
+          color="success"
+          startIcon={<DownloadIcon />}
+          onClick={handleOpenExportDialog}
+          sx={{ textTransform: "none" }}
+        >
+          Export Report
+        </Button>
+      </Paper>
+
+      {/* Export Dialog */}
+      <Dialog
+        open={exportDialogOpen}
+        onClose={handleCloseExportDialog}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            background: "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)",
+            color: "white",
+            textAlign: "center",
+          }}
+        >
+          <DownloadIcon sx={{ fontSize: 32, mb: 1 }} />
+          <Typography variant="h6" fontWeight={700}>
+            Export Report
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3 }}>
+          {/* Format Selection */}
+          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+            Export Format
+          </Typography>
+          <ToggleButtonGroup
+            value={exportFormat}
+            exclusive
+            onChange={(e, newFormat) => newFormat && setExportFormat(newFormat)}
+            fullWidth
+            sx={{ mb: 3 }}
           >
-            Export Daily Report
+            <ToggleButton value="excel" sx={{ py: 1.5 }}>
+              <TableChartIcon sx={{ mr: 1 }} />
+              Excel
+            </ToggleButton>
+            <ToggleButton value="pdf" sx={{ py: 1.5 }}>
+              <PictureAsPdfIcon sx={{ mr: 1 }} />
+              PDF
+            </ToggleButton>
+          </ToggleButtonGroup>
+
+          {/* Quick Date Presets */}
+          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+            Quick Select
+          </Typography>
+          <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={setTodayDates}
+              sx={{ flex: 1, textTransform: "none" }}
+            >
+              Today
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={setThisWeekDates}
+              sx={{ flex: 1, textTransform: "none" }}
+            >
+              This Week
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={setThisMonthDates}
+              sx={{ flex: 1, textTransform: "none" }}
+            >
+              This Month
+            </Button>
+          </Stack>
+
+          {/* Date Range */}
+          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+            Date Range
+          </Typography>
+          <Stack spacing={2}>
+            <TextField
+              label="Start Date"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+            />
+            <TextField
+              label="End Date"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button
+            onClick={handleCloseExportDialog}
+            variant="outlined"
+            sx={{ flex: 1 }}
+          >
+            Cancel
           </Button>
           <Button
+            onClick={handleExport}
             variant="contained"
+            startIcon={
+              exportFormat === "excel" ? (
+                <TableChartIcon />
+              ) : (
+                <PictureAsPdfIcon />
+              )
+            }
             sx={{
-              textTransform: "none",
-              mb: 1,
-              background: "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)",
+              flex: 1,
+              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
               "&:hover": {
-                background: "linear-gradient(135deg, #2a4a8a 0%, #1e3a6e 100%)",
+                background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
               },
             }}
-            startIcon={<DownloadIcon />}
-            onClick={() => exportToExcel("monthly")}
           >
-            Export Monthly Report
+            Export {exportFormat === "excel" ? "Excel" : "PDF"}
           </Button>
-        </Stack>
-      </Paper>
+        </DialogActions>
+      </Dialog>
 
       {/* Data Management */}
       <Paper

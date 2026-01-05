@@ -16,13 +16,16 @@ import LocalLaundryServiceIcon from "@mui/icons-material/LocalLaundryService";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import PersonIcon from "@mui/icons-material/Person";
 import PhoneIcon from "@mui/icons-material/Phone";
+import ReceiptIcon from "@mui/icons-material/Receipt";
 import { getOrders, updateOrderStatus } from "./db/database";
+import ReceiptPreview from "./ReceiptPreview";
 
 // Order workflow
 const STATUSES = ["Received", "Washing", "Drying", "Ready", "Released"];
 
 export default function OrderBoard() {
   const [orders, setOrders] = useState([]);
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
 
   // =====================
   // LOAD ORDERS FROM INDEXEDDB
@@ -390,6 +393,37 @@ export default function OrderBoard() {
                     </Stack>
 
                     {/* Action Buttons */}
+                    <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={
+                          <ReceiptIcon sx={{ fontSize: "14px !important" }} />
+                        }
+                        onClick={() =>
+                          setSelectedReceipt({
+                            receiptNumber: order.receiptNumber,
+                            customer: order.customerName,
+                            phone: order.phone,
+                            items: order.items,
+                            total: order.total,
+                            method: order.paymentMethod || "Cash",
+                            date: formatDate(order.createdAt),
+                            gcashNumber: order.gcashNumber,
+                            gcashRefNumber: order.gcashRefNumber,
+                          })
+                        }
+                        sx={{
+                          fontSize: { xs: "0.65rem", sm: "0.75rem" },
+                          py: { xs: 0.5, sm: 0.75 },
+                          flex: 1,
+                        }}
+                      >
+                        View Receipt
+                      </Button>
+                    </Stack>
+
+                    {/* Status Buttons */}
                     <Stack direction="row" spacing={1} flexWrap="wrap">
                       {STATUSES.map((status) => {
                         const isCurrentOrPast =
@@ -526,6 +560,34 @@ export default function OrderBoard() {
                           }}
                         />
                       </Stack>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={
+                          <ReceiptIcon sx={{ fontSize: "14px !important" }} />
+                        }
+                        onClick={() =>
+                          setSelectedReceipt({
+                            receiptNumber: order.receiptNumber,
+                            customer: order.customerName,
+                            phone: order.phone,
+                            items: order.items,
+                            total: order.total,
+                            method: order.paymentMethod || "Cash",
+                            date: formatDate(order.createdAt),
+                            gcashNumber: order.gcashNumber,
+                            gcashRefNumber: order.gcashRefNumber,
+                          })
+                        }
+                        sx={{
+                          mt: 1,
+                          fontSize: { xs: "0.65rem", sm: "0.75rem" },
+                          py: { xs: 0.5, sm: 0.75 },
+                          width: "100%",
+                        }}
+                      >
+                        View Receipt
+                      </Button>
                     </CardContent>
                   </Card>
                 </Grid>
@@ -533,6 +595,13 @@ export default function OrderBoard() {
           </Grid>
         </Paper>
       )}
+
+      {/* Receipt Preview Dialog */}
+      <ReceiptPreview
+        open={Boolean(selectedReceipt)}
+        data={selectedReceipt}
+        onClose={() => setSelectedReceipt(null)}
+      />
     </Box>
   );
 }

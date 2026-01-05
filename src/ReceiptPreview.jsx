@@ -15,6 +15,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import PhoneIcon from "@mui/icons-material/Phone";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import ReceiptIcon from "@mui/icons-material/Receipt";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 
 export default function ReceiptPreview({ open, onClose, data }) {
   if (!data) return null;
@@ -127,6 +128,40 @@ export default function ReceiptPreview({ open, onClose, data }) {
             </Box>
           </Stack>
         </Box>
+
+        {/* GCash Reference Number */}
+        {data.method === "GCash" && data.gcashRefNumber && (
+          <Box
+            sx={{
+              p: 2,
+              background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+              borderRadius: 2,
+              mb: 3,
+              color: "white",
+            }}
+          >
+            <Stack spacing={1}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <AccountBalanceWalletIcon sx={{ fontSize: 20 }} />
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  GCash Number
+                </Typography>
+                <Typography fontWeight={600} sx={{ ml: "auto" }}>
+                  {data.gcashNumber}
+                </Typography>
+              </Box>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <ReceiptIcon sx={{ fontSize: 20 }} />
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  Reference No.
+                </Typography>
+                <Typography fontWeight={700} sx={{ ml: "auto" }}>
+                  {data.gcashRefNumber}
+                </Typography>
+              </Box>
+            </Stack>
+          </Box>
+        )}
 
         {/* Order Items */}
         <Typography
