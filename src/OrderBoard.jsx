@@ -13,6 +13,8 @@ import {
   LinearProgress,
   Snackbar,
   Alert,
+  Fade,
+  Zoom,
 } from "@mui/material";
 import LocalLaundryServiceIcon from "@mui/icons-material/LocalLaundryService";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -20,6 +22,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import PhoneIcon from "@mui/icons-material/Phone";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import PaidIcon from "@mui/icons-material/Paid";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import {
   getOrders,
   updateOrderStatus,
@@ -171,298 +174,399 @@ export default function OrderBoard() {
   // =====================
   return (
     <Box>
-      {/* Status Summary Cards */}
-      <Paper
-        sx={{
-          p: { xs: 2, sm: 3 },
-          mb: { xs: 2, sm: 3 },
-          borderRadius: { xs: 2, sm: 3 },
-          background: "white",
-        }}
-      >
-        <Grid container spacing={{ xs: 1, sm: 2 }}>
-          {STATUSES.map((status) => (
-            <Grid item xs={4} sm={2.4} key={status}>
-              <Paper
-                sx={{
-                  p: { xs: 1, sm: 2 },
-                  textAlign: "center",
-                  background: statusConfig[status].bg,
-                  color: "white",
-                  borderRadius: { xs: 2, sm: 3 },
-                }}
-              >
-                <Typography
-                  sx={{ fontSize: { xs: "1.25rem", sm: "1.75rem" }, mb: 0.5 }}
-                >
-                  {statusConfig[status].icon}
-                </Typography>
-                <Typography
-                  variant="h4"
-                  sx={{
-                    fontWeight: 700,
-                    fontSize: { xs: "1.25rem", sm: "2rem" },
-                  }}
-                >
-                  {statusCounts[status]}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    opacity: 0.9,
-                    fontWeight: 500,
-                    fontSize: { xs: "0.6rem", sm: "0.75rem" },
-                  }}
-                >
-                  {status}
-                </Typography>
-              </Paper>
-            </Grid>
-          ))}
-        </Grid>
-      </Paper>
+      {/* Status Summary Cards - Enhanced */}
+      <Fade in timeout={500}>
+        <Paper
+          elevation={0}
+          sx={{
+            p: { xs: 2, sm: 3 },
+            mb: { xs: 2, sm: 3 },
+            borderRadius: 4,
+            background: "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(20px)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+          }}
+        >
+          <Box
+            sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2.5 }}
+          >
+            <Avatar
+              sx={{
+                background: "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)",
+                width: 40,
+                height: 40,
+              }}
+            >
+              <AccessTimeIcon />
+            </Avatar>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: "#1e3a5f" }}>
+              Order Status Overview
+            </Typography>
+          </Box>
+          <Grid container spacing={{ xs: 1, sm: 2 }}>
+            {STATUSES.map((status, index) => (
+              <Grid item xs={4} sm={2.4} key={status}>
+                <Zoom in timeout={300 + index * 100}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: { xs: 1.5, sm: 2 },
+                      textAlign: "center",
+                      background: statusConfig[status].bg,
+                      color: "white",
+                      borderRadius: 3,
+                      boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                      transition: "all 0.3s",
+                      "&:hover": {
+                        transform: "translateY(-4px)",
+                        boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
+                      },
+                    }}
+                  >
+                    <Typography
+                      sx={{ fontSize: { xs: "1.5rem", sm: "2rem" }, mb: 0.5 }}
+                    >
+                      {statusConfig[status].icon}
+                    </Typography>
+                    <Typography
+                      variant="h3"
+                      sx={{
+                        fontWeight: 800,
+                        fontSize: { xs: "1.5rem", sm: "2.25rem" },
+                        textShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                      }}
+                    >
+                      {statusCounts[status]}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        opacity: 0.9,
+                        fontWeight: 600,
+                        fontSize: { xs: "0.6rem", sm: "0.75rem" },
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      {status}
+                    </Typography>
+                  </Paper>
+                </Zoom>
+              </Grid>
+            ))}
+          </Grid>
+        </Paper>
+      </Fade>
 
       {/* Orders List */}
       {orders.length === 0 ? (
-        <Paper
-          sx={{
-            p: { xs: 4, sm: 6 },
-            textAlign: "center",
-            borderRadius: { xs: 2, sm: 3 },
-          }}
-        >
-          <LocalLaundryServiceIcon
+        <Fade in timeout={700}>
+          <Paper
+            elevation={0}
             sx={{
-              fontSize: { xs: 48, sm: 72 },
-              color: "text.secondary",
-              opacity: 0.3,
+              p: { xs: 6, sm: 8 },
+              textAlign: "center",
+              borderRadius: 4,
+              background: "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(20px)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
             }}
-          />
-          <Typography
-            color="text.secondary"
-            sx={{ mt: 2, fontSize: { xs: "0.9rem", sm: "1rem" } }}
           >
-            No orders yet
-          </Typography>
-        </Paper>
+            <LocalLaundryServiceIcon
+              sx={{
+                fontSize: { xs: 80, sm: 120 },
+                color: "#375da5",
+                opacity: 0.2,
+                mb: 2,
+              }}
+            />
+            <Typography
+              variant="h5"
+              sx={{ color: "#1e3a5f", fontWeight: 600, mb: 1 }}
+            >
+              No Orders Yet
+            </Typography>
+            <Typography color="text.secondary">
+              Orders will appear here when customers place them
+            </Typography>
+          </Paper>
+        </Fade>
       ) : (
         <Grid container spacing={{ xs: 1.5, sm: 2 }}>
           {orders
             .filter((o) => o.status !== "Released")
-            .map((order) => (
+            .map((order, index) => (
               <Grid item xs={12} sm={6} lg={4} key={order.id}>
-                <Card
-                  sx={{
-                    borderRadius: { xs: 2, sm: 3 },
-                    overflow: "hidden",
-                    transition: "all 0.3s ease",
-                    border: isPaid(order)
-                      ? "3px solid #10b981"
-                      : "3px solid #ef4444",
-                    "&:hover": {
-                      boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                      transform: "translateY(-2px)",
-                    },
-                  }}
-                >
-                  {/* Status Header */}
-                  <Box
+                <Zoom in timeout={300 + index * 50}>
+                  <Card
+                    elevation={0}
                     sx={{
-                      background: statusConfig[order.status]?.bg,
-                      color: "white",
-                      p: { xs: 1.5, sm: 2 },
+                      borderRadius: 4,
+                      overflow: "hidden",
+                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                      border: isPaid(order)
+                        ? "3px solid #10b981"
+                        : "3px solid #ef4444",
+                      background: "rgba(255, 255, 255, 0.98)",
+                      boxShadow: isPaid(order)
+                        ? "0 8px 32px rgba(16, 185, 129, 0.15)"
+                        : "0 8px 32px rgba(239, 68, 68, 0.15)",
+                      "&:hover": {
+                        transform: "translateY(-8px)",
+                        boxShadow: isPaid(order)
+                          ? "0 20px 40px rgba(16, 185, 129, 0.25)"
+                          : "0 20px 40px rgba(239, 68, 68, 0.25)",
+                      },
                     }}
                   >
-                    <Stack
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
+                    {/* Status Header */}
+                    <Box
+                      sx={{
+                        background: statusConfig[order.status]?.bg,
+                        color: "white",
+                        p: { xs: 2, sm: 2.5 },
+                        position: "relative",
+                        overflow: "hidden",
+                      }}
                     >
+                      {/* Background Pattern */}
                       <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        <Typography
-                          sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
-                        >
-                          {statusConfig[order.status]?.icon}
-                        </Typography>
-                        <Typography
-                          variant="h6"
-                          sx={{
-                            fontWeight: 700,
-                            fontSize: { xs: "0.9rem", sm: "1.1rem" },
-                          }}
-                        >
-                          Order #{order.id}
-                        </Typography>
-                      </Box>
-                      <Chip
-                        label={order.status}
-                        size="small"
                         sx={{
-                          bgcolor: "rgba(255,255,255,0.2)",
-                          color: "white",
-                          fontWeight: 600,
-                          fontSize: { xs: "0.65rem", sm: "0.75rem" },
+                          position: "absolute",
+                          top: -20,
+                          right: -20,
+                          width: 100,
+                          height: 100,
+                          borderRadius: "50%",
+                          bgcolor: "rgba(255,255,255,0.1)",
                         }}
                       />
-                    </Stack>
-                    <LinearProgress
-                      variant="determinate"
-                      value={getProgress(order.status)}
-                      sx={{
-                        mt: 1.5,
-                        height: 6,
-                        borderRadius: 3,
-                        bgcolor: "rgba(255,255,255,0.2)",
-                        "& .MuiLinearProgress-bar": {
-                          bgcolor: "white",
-                          borderRadius: 3,
-                        },
-                      }}
-                    />
-                  </Box>
-
-                  <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                    {/* Receipt Number */}
-                    {order.receiptNumber && (
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          display: "block",
-                          mb: 1,
-                          color: "primary.main",
-                          fontWeight: 600,
-                          fontSize: { xs: "0.7rem", sm: "0.75rem" },
-                        }}
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
                       >
-                        📋 {order.receiptNumber}
-                      </Typography>
-                    )}
-
-                    {/* Customer Info */}
-                    <Stack spacing={1} sx={{ mb: 2 }}>
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        <Avatar
+                        <Box
                           sx={{
-                            width: { xs: 28, sm: 32 },
-                            height: { xs: 28, sm: 32 },
-                            bgcolor: "primary.main",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1.5,
                           }}
                         >
-                          <PersonIcon sx={{ fontSize: { xs: 16, sm: 18 } }} />
-                        </Avatar>
-                        <Typography
-                          fontWeight={600}
-                          sx={{ fontSize: { xs: "0.85rem", sm: "1rem" } }}
-                        >
-                          {order.customerName}
-                        </Typography>
-                      </Box>
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        <Avatar
-                          sx={{
-                            width: { xs: 28, sm: 32 },
-                            height: { xs: 28, sm: 32 },
-                            bgcolor: "secondary.main",
-                          }}
-                        >
-                          <PhoneIcon sx={{ fontSize: { xs: 16, sm: 18 } }} />
-                        </Avatar>
-                        <Typography
-                          color="text.secondary"
-                          sx={{ fontSize: { xs: "0.8rem", sm: "0.9rem" } }}
-                        >
-                          {order.phone}
-                        </Typography>
-                      </Box>
-                    </Stack>
-
-                    {/* Order Items */}
-                    {order.items && order.items.length > 0 && (
-                      <Box sx={{ mb: 2 }}>
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{ fontWeight: 600 }}
-                        >
-                          Services:
-                        </Typography>
-                        <Stack
-                          direction="row"
-                          spacing={0.5}
-                          flexWrap="wrap"
-                          sx={{ mt: 0.5 }}
-                        >
-                          {order.items.map((item, idx) => (
-                            <Chip
-                              key={idx}
-                              label={`${item.name} x${item.loads}`}
-                              size="small"
+                          <Typography
+                            sx={{ fontSize: { xs: "1.5rem", sm: "2rem" } }}
+                          >
+                            {statusConfig[order.status]?.icon}
+                          </Typography>
+                          <Box>
+                            <Typography
+                              variant="h6"
                               sx={{
-                                fontSize: { xs: "0.65rem", sm: "0.75rem" },
-                                mb: 0.5,
+                                fontWeight: 800,
+                                fontSize: { xs: "1rem", sm: "1.2rem" },
+                                textShadow: "0 2px 4px rgba(0,0,0,0.2)",
                               }}
-                            />
-                          ))}
-                        </Stack>
-                      </Box>
-                    )}
-
-                    {/* Total & Date */}
-                    <Stack
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                      sx={{ mb: 2 }}
-                    >
-                      <Stack direction="row" spacing={1} alignItems="center">
+                            >
+                              Order #{order.id}
+                            </Typography>
+                            {order.receiptNumber && (
+                              <Typography
+                                variant="caption"
+                                sx={{ opacity: 0.9, fontSize: "0.7rem" }}
+                              >
+                                📋 {order.receiptNumber}
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
                         <Chip
-                          label={`₱${Number(order.total).toFixed(2)}`}
-                          color="primary"
-                          sx={{
-                            fontWeight: 700,
-                            fontSize: { xs: "0.75rem", sm: "0.9rem" },
-                          }}
-                        />
-                        <Chip
-                          icon={
-                            <PaidIcon sx={{ fontSize: "16px !important" }} />
-                          }
-                          label={isPaid(order) ? "Paid" : "Unpaid"}
+                          label={order.status}
                           size="small"
                           sx={{
-                            fontWeight: 600,
-                            fontSize: { xs: "0.65rem", sm: "0.75rem" },
-                            bgcolor: isPaid(order) ? "#10b981" : "#ef4444",
+                            bgcolor: "rgba(255,255,255,0.25)",
+                            backdropFilter: "blur(10px)",
                             color: "white",
-                            "& .MuiChip-icon": {
-                              color: "white",
-                            },
+                            fontWeight: 700,
+                            fontSize: { xs: "0.7rem", sm: "0.8rem" },
                           }}
                         />
                       </Stack>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ fontSize: { xs: "0.65rem", sm: "0.75rem" } }}
-                      >
-                        {formatDate(order.createdAt)}
-                      </Typography>
-                    </Stack>
+                      <LinearProgress
+                        variant="determinate"
+                        value={getProgress(order.status)}
+                        sx={{
+                          mt: 2,
+                          height: 8,
+                          borderRadius: 4,
+                          bgcolor: "rgba(255,255,255,0.2)",
+                          "& .MuiLinearProgress-bar": {
+                            bgcolor: "white",
+                            borderRadius: 4,
+                          },
+                        }}
+                      />
+                    </Box>
 
-                    {/* Action Buttons */}
-                    <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                    <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+                      {/* Customer Info */}
+                      <Stack spacing={1.5} sx={{ mb: 2 }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1.5,
+                          }}
+                        >
+                          <Avatar
+                            sx={{
+                              width: 36,
+                              height: 36,
+                              background:
+                                "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)",
+                            }}
+                          >
+                            <PersonIcon sx={{ fontSize: 18 }} />
+                          </Avatar>
+                          <Box>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              Customer
+                            </Typography>
+                            <Typography
+                              fontWeight={700}
+                              sx={{ color: "#1e3a5f" }}
+                            >
+                              {order.customerName}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1.5,
+                          }}
+                        >
+                          <Avatar
+                            sx={{
+                              width: 36,
+                              height: 36,
+                              background:
+                                "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                            }}
+                          >
+                            <PhoneIcon sx={{ fontSize: 18 }} />
+                          </Avatar>
+                          <Box>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              Phone
+                            </Typography>
+                            <Typography
+                              fontWeight={600}
+                              sx={{ color: "#64748b" }}
+                            >
+                              {order.phone}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Stack>
+
+                      {/* Order Items */}
+                      {order.items && order.items.length > 0 && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontWeight: 700,
+                              color: "#64748b",
+                              textTransform: "uppercase",
+                              letterSpacing: 0.5,
+                            }}
+                          >
+                            Services
+                          </Typography>
+                          <Stack
+                            direction="row"
+                            spacing={0.5}
+                            flexWrap="wrap"
+                            sx={{ mt: 1 }}
+                          >
+                            {order.items.map((item, idx) => (
+                              <Chip
+                                key={idx}
+                                label={`${item.name} ×${item.loads}`}
+                                size="small"
+                                sx={{
+                                  fontSize: "0.7rem",
+                                  mb: 0.5,
+                                  bgcolor: "#f1f5f9",
+                                  fontWeight: 600,
+                                }}
+                              />
+                            ))}
+                          </Stack>
+                        </Box>
+                      )}
+
+                      {/* Total & Payment Status */}
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2,
+                          background:
+                            "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
+                          mb: 2,
+                        }}
+                      >
+                        <Stack
+                          direction="row"
+                          justifyContent="space-between"
+                          alignItems="center"
+                        >
+                          <Chip
+                            label={`₱${Number(order.total).toFixed(2)}`}
+                            sx={{
+                              fontWeight: 800,
+                              fontSize: "1rem",
+                              bgcolor: "#375da5",
+                              color: "white",
+                              height: 36,
+                            }}
+                          />
+                          <Chip
+                            icon={
+                              <PaidIcon sx={{ fontSize: "16px !important" }} />
+                            }
+                            label={isPaid(order) ? "PAID" : "UNPAID"}
+                            size="small"
+                            sx={{
+                              fontWeight: 700,
+                              fontSize: "0.75rem",
+                              bgcolor: isPaid(order) ? "#10b981" : "#ef4444",
+                              color: "white",
+                              "& .MuiChip-icon": { color: "white" },
+                            }}
+                          />
+                        </Stack>
+                        <Typography
+                          variant="caption"
+                          sx={{ display: "block", mt: 1, color: "#64748b" }}
+                        >
+                          {formatDate(order.createdAt)}
+                        </Typography>
+                      </Paper>
+
+                      {/* Action Buttons */}
                       <Button
+                        fullWidth
                         variant="outlined"
-                        size="small"
-                        startIcon={
-                          <ReceiptIcon sx={{ fontSize: "14px !important" }} />
-                        }
+                        startIcon={<ReceiptIcon />}
                         onClick={() =>
                           setSelectedReceipt({
                             id: order.id,
@@ -480,72 +584,74 @@ export default function OrderBoard() {
                           })
                         }
                         sx={{
-                          fontSize: { xs: "0.65rem", sm: "0.75rem" },
-                          py: { xs: 0.5, sm: 0.75 },
-                          flex: 1,
+                          mb: 1.5,
+                          py: 1,
+                          borderRadius: 2,
+                          fontWeight: 600,
                         }}
                       >
-                        View Receipt
+                        View Receipt & Pay
                       </Button>
-                    </Stack>
 
-                    {/* Status Buttons */}
-                    <Stack direction="row" spacing={1} flexWrap="wrap">
-                      {STATUSES.map((status) => {
-                        const isCurrentOrPast =
-                          STATUSES.indexOf(status) <=
-                          STATUSES.indexOf(order.status);
+                      {/* Status Buttons */}
+                      <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                        {STATUSES.map((status) => {
+                          const isCurrentOrPast =
+                            STATUSES.indexOf(status) <=
+                            STATUSES.indexOf(order.status);
+                          const cantReleaseUnpaid =
+                            status === "Released" && !isPaid(order);
 
-                        // Can't release if not paid
-                        const cantReleaseUnpaid =
-                          status === "Released" && !isPaid(order);
-
-                        return (
-                          <Button
-                            key={status}
-                            variant={
-                              order.status === status ? "contained" : "outlined"
-                            }
-                            size="small"
-                            onClick={() => handleUpdateStatus(order, status)}
-                            disabled={
-                              (isCurrentOrPast && status !== order.status) ||
-                              cantReleaseUnpaid
-                            }
-                            startIcon={
-                              order.status === status ? (
-                                <CheckCircleIcon
-                                  sx={{ fontSize: "14px !important" }}
-                                />
-                              ) : null
-                            }
-                            sx={{
-                              flex: 1,
-                              minWidth: "auto",
-                              fontSize: { xs: "0.6rem", sm: "0.7rem" },
-                              py: { xs: 0.5, sm: 0.75 },
-                              px: { xs: 0.5, sm: 1 },
-                              mb: 0.5,
-                              ...(order.status === status && {
-                                background: statusConfig[status]?.bg,
-                                borderColor: "transparent",
-                              }),
-                              ...(cantReleaseUnpaid && {
-                                opacity: 0.5,
-                              }),
-                            }}
-                          >
-                            {status === "Washing"
-                              ? "Wash"
-                              : status === "Drying"
-                              ? "Dry"
-                              : status}
-                          </Button>
-                        );
-                      })}
-                    </Stack>
-                  </CardContent>
-                </Card>
+                          return (
+                            <Button
+                              key={status}
+                              variant={
+                                order.status === status
+                                  ? "contained"
+                                  : "outlined"
+                              }
+                              size="small"
+                              onClick={() => handleUpdateStatus(order, status)}
+                              disabled={
+                                (isCurrentOrPast && status !== order.status) ||
+                                cantReleaseUnpaid
+                              }
+                              startIcon={
+                                order.status === status ? (
+                                  <CheckCircleIcon
+                                    sx={{ fontSize: "14px !important" }}
+                                  />
+                                ) : null
+                              }
+                              sx={{
+                                flex: 1,
+                                minWidth: "auto",
+                                fontSize: "0.65rem",
+                                py: 0.75,
+                                px: 0.5,
+                                mb: 0.5,
+                                borderRadius: 2,
+                                ...(order.status === status && {
+                                  background: statusConfig[status]?.bg,
+                                  borderColor: "transparent",
+                                }),
+                                ...(cantReleaseUnpaid && {
+                                  opacity: 0.5,
+                                }),
+                              }}
+                            >
+                              {status === "Washing"
+                                ? "Wash"
+                                : status === "Drying"
+                                ? "Dry"
+                                : status}
+                            </Button>
+                          );
+                        })}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Zoom>
               </Grid>
             ))}
         </Grid>
@@ -553,124 +659,159 @@ export default function OrderBoard() {
 
       {/* Released Orders Section */}
       {orders.filter((o) => o.status === "Released").length > 0 && (
-        <Paper
-          sx={{
-            mt: { xs: 3, sm: 4 },
-            p: { xs: 2, sm: 3 },
-            borderRadius: { xs: 2, sm: 3 },
-            background: "white",
-          }}
-        >
-          <Typography
-            variant="h6"
+        <Fade in timeout={900}>
+          <Paper
+            elevation={0}
             sx={{
-              mb: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              color: "primary.main",
-              fontSize: { xs: "0.9rem", sm: "1.1rem" },
+              mt: { xs: 3, sm: 4 },
+              p: { xs: 2, sm: 3 },
+              borderRadius: 4,
+              background: "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(20px)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
             }}
           >
-            🎉 Released Orders (
-            {orders.filter((o) => o.status === "Released").length})
-          </Typography>
-          <Grid container spacing={{ xs: 1.5, sm: 2 }}>
-            {orders
-              .filter((o) => o.status === "Released")
-              .slice(0, 6)
-              .map((order) => (
-                <Grid item xs={12} sm={6} lg={4} key={order.id}>
-                  <Card
-                    sx={{
-                      borderRadius: { xs: 2, sm: 3 },
-                      background:
-                        "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
-                    }}
-                  >
-                    <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                      <Stack
-                        direction="row"
-                        justifyContent="space-between"
-                        alignItems="center"
-                      >
-                        <Box>
-                          {order.receiptNumber && (
-                            <Typography
-                              variant="caption"
-                              sx={{
-                                display: "block",
-                                color: "primary.main",
-                                fontWeight: 600,
-                                fontSize: { xs: "0.65rem", sm: "0.7rem" },
-                              }}
-                            >
-                              📋 {order.receiptNumber}
-                            </Typography>
-                          )}
-                          <Typography
-                            fontWeight={600}
-                            sx={{ fontSize: { xs: "0.85rem", sm: "1rem" } }}
-                          >
-                            {order.customerName}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ fontSize: { xs: "0.7rem", sm: "0.8rem" } }}
-                          >
-                            ₱{Number(order.total).toFixed(2)} •{" "}
-                            {formatDate(order.createdAt)}
-                          </Typography>
-                        </Box>
-                        <Chip
-                          label="Released"
-                          size="small"
-                          sx={{
-                            background: statusConfig.Released.bg,
-                            color: "white",
-                            fontWeight: 600,
-                            fontSize: { xs: "0.6rem", sm: "0.7rem" },
-                          }}
-                        />
-                      </Stack>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={
-                          <ReceiptIcon sx={{ fontSize: "14px !important" }} />
-                        }
-                        onClick={() =>
-                          setSelectedReceipt({
-                            id: order.id,
-                            receiptNumber: order.receiptNumber,
-                            customer: order.customerName,
-                            phone: order.phone,
-                            items: order.items,
-                            total: order.total,
-                            method: order.paymentMethod || "Unpaid",
-                            date: formatDate(order.createdAt),
-                            gcashNumber: order.gcashNumber,
-                            gcashRefNumber: order.gcashRefNumber,
-                            amountPaid: order.amountPaid,
-                            change: order.change,
-                          })
-                        }
+            <Box
+              sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2.5 }}
+            >
+              <Avatar
+                sx={{
+                  background:
+                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  width: 40,
+                  height: 40,
+                }}
+              >
+                <CheckCircleIcon />
+              </Avatar>
+              <Box>
+                <Typography
+                  variant="h6"
+                  sx={{ fontWeight: 700, color: "#1e3a5f" }}
+                >
+                  Released Orders
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {orders.filter((o) => o.status === "Released").length}{" "}
+                  completed orders
+                </Typography>
+              </Box>
+            </Box>
+            <Grid container spacing={{ xs: 1.5, sm: 2 }}>
+              {orders
+                .filter((o) => o.status === "Released")
+                .slice(0, 6)
+                .map((order, index) => (
+                  <Grid item xs={12} sm={6} lg={4} key={order.id}>
+                    <Zoom in timeout={300 + index * 50}>
+                      <Card
+                        elevation={0}
                         sx={{
-                          mt: 1,
-                          fontSize: { xs: "0.65rem", sm: "0.75rem" },
-                          py: { xs: 0.5, sm: 0.75 },
-                          width: "100%",
+                          borderRadius: 3,
+                          background:
+                            "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)",
+                          border: "1px solid #86efac",
+                          transition: "all 0.3s",
+                          "&:hover": {
+                            transform: "translateY(-4px)",
+                            boxShadow: "0 8px 24px rgba(16, 185, 129, 0.2)",
+                          },
                         }}
                       >
-                        View Receipt
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-          </Grid>
-        </Paper>
+                        <CardContent sx={{ p: 2 }}>
+                          <Stack
+                            direction="row"
+                            justifyContent="space-between"
+                            alignItems="center"
+                          >
+                            <Box>
+                              {order.receiptNumber && (
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    display: "block",
+                                    color: "#166534",
+                                    fontWeight: 700,
+                                    fontSize: "0.7rem",
+                                  }}
+                                >
+                                  📋 {order.receiptNumber}
+                                </Typography>
+                              )}
+                              <Typography
+                                fontWeight={700}
+                                sx={{ color: "#166534", fontSize: "1rem" }}
+                              >
+                                {order.customerName}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                sx={{ color: "#15803d" }}
+                              >
+                                ₱{Number(order.total).toFixed(2)} •{" "}
+                                {formatDate(order.createdAt)}
+                              </Typography>
+                            </Box>
+                            <Chip
+                              icon={
+                                <CheckCircleIcon
+                                  sx={{ fontSize: "16px !important" }}
+                                />
+                              }
+                              label="Done"
+                              size="small"
+                              sx={{
+                                background:
+                                  "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                                color: "white",
+                                fontWeight: 700,
+                                "& .MuiChip-icon": { color: "white" },
+                              }}
+                            />
+                          </Stack>
+                          <Button
+                            fullWidth
+                            variant="outlined"
+                            size="small"
+                            startIcon={<ReceiptIcon />}
+                            onClick={() =>
+                              setSelectedReceipt({
+                                id: order.id,
+                                receiptNumber: order.receiptNumber,
+                                customer: order.customerName,
+                                phone: order.phone,
+                                items: order.items,
+                                total: order.total,
+                                method: order.paymentMethod || "Unpaid",
+                                date: formatDate(order.createdAt),
+                                gcashNumber: order.gcashNumber,
+                                gcashRefNumber: order.gcashRefNumber,
+                                amountPaid: order.amountPaid,
+                                change: order.change,
+                              })
+                            }
+                            sx={{
+                              mt: 1.5,
+                              borderRadius: 2,
+                              borderColor: "#10b981",
+                              color: "#10b981",
+                              fontWeight: 600,
+                              "&:hover": {
+                                borderColor: "#059669",
+                                bgcolor: "rgba(16, 185, 129, 0.1)",
+                              },
+                            }}
+                          >
+                            View Receipt
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </Zoom>
+                  </Grid>
+                ))}
+            </Grid>
+          </Paper>
+        </Fade>
       )}
 
       {/* Receipt Preview Dialog */}
