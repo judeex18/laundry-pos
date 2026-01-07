@@ -232,13 +232,13 @@ export default function POS() {
     <>
       <Grid container spacing={{ xs: 2, sm: 3 }}>
         {/* Left Section - Services */}
-        <Grid item xs={12} lg={7}>
+        <Grid item xs={12} sm={7} md={7} lg={7}>
           {/* Customer Info Card - Glass Effect */}
           <Fade in timeout={500}>
             <Paper
               elevation={0}
               sx={{
-                p: { xs: 2.5, sm: 3 },
+                p: { xs: 2, sm: 3 },
                 mb: { xs: 2, sm: 3 },
                 background: "rgba(255, 255, 255, 0.95)",
                 backdropFilter: "blur(20px)",
@@ -254,8 +254,8 @@ export default function POS() {
                   sx={{
                     background:
                       "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)",
-                    width: 44,
-                    height: 44,
+                    width: { xs: 36, sm: 44 },
+                    height: { xs: 36, sm: 44 },
                   }}
                 >
                   <PersonIcon />
@@ -263,11 +263,20 @@ export default function POS() {
                 <Box>
                   <Typography
                     variant="h6"
-                    sx={{ fontWeight: 700, color: "#1e3a5f", lineHeight: 1.2 }}
+                    sx={{
+                      fontWeight: 700,
+                      color: "#1e3a5f",
+                      lineHeight: 1.2,
+                      fontSize: { xs: "1rem", sm: "1.25rem" },
+                    }}
                   >
                     Customer Information
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ fontSize: { xs: "0.65rem", sm: "0.75rem" } }}
+                  >
                     Enter customer details to create order
                   </Typography>
                 </Box>
@@ -325,7 +334,7 @@ export default function POS() {
             <Paper
               elevation={0}
               sx={{
-                p: { xs: 2.5, sm: 3 },
+                p: { xs: 2, sm: 3 },
                 background: "rgba(255, 255, 255, 0.95)",
                 backdropFilter: "blur(20px)",
                 borderRadius: 4,
@@ -334,38 +343,52 @@ export default function POS() {
               }}
             >
               <Box
-                sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 3 }}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  mb: { xs: 2, sm: 3 },
+                }}
               >
                 <Avatar
                   sx={{
                     background:
                       "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                    width: 44,
-                    height: 44,
+                    width: { xs: 36, sm: 44 },
+                    height: { xs: 36, sm: 44 },
                   }}
                 >
-                  <StorefrontIcon />
+                  <StorefrontIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
                 </Avatar>
                 <Box>
                   <Typography
                     variant="h6"
-                    sx={{ fontWeight: 700, color: "#1e3a5f", lineHeight: 1.2 }}
+                    sx={{
+                      fontWeight: 700,
+                      color: "#1e3a5f",
+                      lineHeight: 1.2,
+                      fontSize: { xs: "1rem", sm: "1.25rem" },
+                    }}
                   >
                     Select Services
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Tap to add service • Long press for details
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ fontSize: { xs: "0.65rem", sm: "0.75rem" } }}
+                  >
+                    Tap to add service
                   </Typography>
                 </Box>
               </Box>
 
-              <Grid container spacing={{ xs: 1.5, sm: 2 }}>
+              <Grid container spacing={{ xs: 1, sm: 2 }}>
                 {services.map((service, index) => {
                   const itemInCart = items.find((i) => i.id === service.id);
                   const loads = itemInCart ? itemInCart.loads : 0;
 
                   return (
-                    <Grid item xs={6} sm={4} md={3} key={service.id}>
+                    <Grid item xs={4} sm={4} md={3} key={service.id}>
                       <Zoom in timeout={300 + index * 100}>
                         <Card
                           onClick={() => addLoad(service)}
@@ -373,7 +396,7 @@ export default function POS() {
                             cursor: "pointer",
                             background: getServiceGradient(index, service.name),
                             color: "white",
-                            borderRadius: 4,
+                            borderRadius: { xs: 2, sm: 4 },
                             transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                             position: "relative",
                             overflow: "visible",
@@ -470,43 +493,57 @@ export default function POS() {
         </Grid>
 
         {/* Right Section - Order Summary */}
-        <Grid item xs={12} lg={5}>
+        <Grid item xs={12} sm={5} md={5} lg={5}>
           <Fade in timeout={900}>
             <Paper
               elevation={0}
               sx={{
-                p: { xs: 2.5, sm: 3 },
+                p: { xs: 2, sm: 3 },
                 background: "rgba(255, 255, 255, 0.98)",
                 backdropFilter: "blur(20px)",
                 borderRadius: 4,
                 boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
                 border: "1px solid rgba(255,255,255,0.2)",
-                position: { lg: "sticky" },
-                top: { lg: 100 },
+                position: { sm: "sticky" },
+                top: { sm: 100 },
               }}
             >
               {/* Cart Header */}
               <Box
-                sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 3 }}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  mb: { xs: 2, sm: 3 },
+                }}
               >
                 <Avatar
                   sx={{
                     background:
                       "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-                    width: 44,
-                    height: 44,
+                    width: { xs: 36, sm: 44 },
+                    height: { xs: 36, sm: 44 },
                   }}
                 >
-                  <ShoppingCartIcon />
+                  <ShoppingCartIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
                 </Avatar>
                 <Box sx={{ flex: 1 }}>
                   <Typography
                     variant="h6"
-                    sx={{ fontWeight: 700, color: "#1e3a5f", lineHeight: 1.2 }}
+                    sx={{
+                      fontWeight: 700,
+                      color: "#1e3a5f",
+                      lineHeight: 1.2,
+                      fontSize: { xs: "1rem", sm: "1.25rem" },
+                    }}
                   >
                     Order Summary
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ fontSize: { xs: "0.65rem", sm: "0.75rem" } }}
+                  >
                     {items.length} service(s) •{" "}
                     {items.reduce((sum, i) => sum + i.loads, 0)} item(s)
                   </Typography>
