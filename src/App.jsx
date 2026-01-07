@@ -18,6 +18,7 @@ import POS from "./POS";
 import OrderBoard from "./OrderBoard";
 import DailyReport from "./DailyReport";
 import LandingPage from "./LandingPage";
+import TrackOrder from "./TrackOrder";
 
 // Custom theme with Ian's Laundry Hub colors (Blue & Gold theme)
 const theme = createTheme({
@@ -134,6 +135,11 @@ function App() {
     return localStorage.getItem("currentTab") || "pos";
   });
 
+  // Check if we're on the admin route
+  const isAdminRoute =
+    window.location.pathname === "/admin" ||
+    window.location.pathname === "/admin/";
+
   const handleTabChange = (newPage) => {
     setPage(newPage);
     localStorage.setItem("currentTab", newPage);
@@ -147,9 +153,21 @@ function App() {
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("userRole");
     setIsLoggedIn(false);
+    // Redirect to home page after logout
+    window.location.href = "/";
   };
 
-  // Show landing page if not logged in
+  // If not on admin route, show public tracker
+  if (!isAdminRoute) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <TrackOrder />
+      </ThemeProvider>
+    );
+  }
+
+  // Admin route - show login if not logged in
   if (!isLoggedIn) {
     return (
       <ThemeProvider theme={theme}>
@@ -159,6 +177,7 @@ function App() {
     );
   }
 
+  // Admin route - logged in, show admin dashboard
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
