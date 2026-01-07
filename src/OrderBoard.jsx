@@ -15,7 +15,9 @@ import {
   Alert,
   Fade,
   Zoom,
+  TextField,
 } from "@mui/material";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import LocalLaundryServiceIcon from "@mui/icons-material/LocalLaundryService";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import PersonIcon from "@mui/icons-material/Person";
@@ -36,6 +38,7 @@ const STATUSES = ["Received", "Washing", "Drying", "Ready", "Released"];
 export default function OrderBoard() {
   const [orders, setOrders] = useState([]);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [releasedDateFilter, setReleasedDateFilter] = useState("");
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -212,6 +215,20 @@ export default function OrderBoard() {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
+    });
+  };
+
+  // Filter released orders by selected date
+  const getFilteredReleasedOrders = () => {
+    const releasedOrders = orders.filter((o) => o.status === "Released");
+
+    if (!releasedDateFilter) {
+      return releasedOrders.slice(0, 6); // Show latest 6 if no date selected
+    }
+
+    return releasedOrders.filter((order) => {
+      const orderDate = new Date(order.createdAt).toISOString().split("T")[0];
+      return orderDate === releasedDateFilter;
     });
   };
 
@@ -775,36 +792,104 @@ export default function OrderBoard() {
             }}
           >
             <Box
-              sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2.5 }}
+              sx={{
+                display: "flex",
+                alignItems: { xs: "flex-start", sm: "center" },
+                flexDirection: { xs: "column", sm: "row" },
+                justifyContent: "space-between",
+                gap: 2,
+                mb: 2.5,
+              }}
             >
-              <Avatar
-                sx={{
-                  background:
-                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                  width: 40,
-                  height: 40,
-                }}
-              >
-                <CheckCircleIcon />
-              </Avatar>
-              <Box>
-                <Typography
-                  variant="h6"
-                  sx={{ fontWeight: 700, color: "#1e3a5f" }}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Avatar
+                  sx={{
+                    background:
+                      "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                    width: 40,
+                    height: 40,
+                  }}
                 >
-                  Released Orders
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {orders.filter((o) => o.status === "Released").length}{" "}
-                  completed orders
-                </Typography>
+                  <CheckCircleIcon />
+                </Avatar>
+                <Box>
+                  <Typography
+                    variant="h6"
+                    sx={{ fontWeight: 700, color: "#1e3a5f" }}
+                  >
+                    Released Orders
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {releasedDateFilter
+                      ? `${
+                          getFilteredReleasedOrders().length
+                        } orders on ${new Date(
+                          releasedDateFilter
+                        ).toLocaleDateString("en-PH", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}`
+                      : `${
+                          orders.filter((o) => o.status === "Released").length
+                        } total completed orders`}
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Date Picker for filtering */}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <CalendarMonthIcon sx={{ color: "#64748b" }} />
+                <TextField
+                  type="date"
+                  size="small"
+                  value={releasedDateFilter}
+                  onChange={(e) => setReleasedDateFilter(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  label="Filter by Date"
+                  sx={{
+                    minWidth: 180,
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      bgcolor: "white",
+                    },
+                  }}
+                />
+                {releasedDateFilter && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => setReleasedDateFilter("")}
+                    sx={{
+                      minWidth: "auto",
+                      px: 1.5,
+                      borderRadius: 2,
+                      borderColor: "#cbd5e1",
+                      color: "#64748b",
+                      "&:hover": {
+                        borderColor: "#94a3b8",
+                        bgcolor: "#f1f5f9",
+                      },
+                    }}
+                  >
+                    Clear
+                  </Button>
+                )}
               </Box>
             </Box>
-            <Grid container spacing={{ xs: 1.5, sm: 2 }}>
-              {orders
-                .filter((o) => o.status === "Released")
-                .slice(0, 6)
-                .map((order, index) => (
+
+            {getFilteredReleasedOrders().length === 0 ? (
+              <Box sx={{ textAlign: "center", py: 4 }}>
+                <CalendarMonthIcon
+                  sx={{ fontSize: 48, color: "#cbd5e1", mb: 1 }}
+                />
+                <Typography color="text.secondary">
+                  No released orders found for this date
+                </Typography>
+              </Box>
+            ) : (
+              <Grid container spacing={{ xs: 1.5, sm: 2 }}>
+                {getFilteredReleasedOrders().map((order, index) => (
                   <Grid item xs={12} sm={6} lg={4} key={order.id}>
                     <Zoom in timeout={300 + index * 50}>
                       <Card
@@ -912,7 +997,8 @@ export default function OrderBoard() {
                     </Zoom>
                   </Grid>
                 ))}
-            </Grid>
+              </Grid>
+            )}
           </Paper>
         </Fade>
       )}
