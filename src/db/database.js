@@ -236,16 +236,17 @@ export const getDailyReport = async () => {
 
   const allOrders = await db.orders.toArray();
 
+  // Filter orders that were PAID today (revenue is recognized on payment date)
   const orders = allOrders.filter((order) => {
-    if (order.status !== "Released") return false;
+    // Only count paid orders (must have paidAt date)
+    if (!order.paidAt) return false;
 
-    // Use releasedAt if available, otherwise fall back to createdAt
-    const dateToCheck = order.releasedAt || order.createdAt;
-    const orderDate = new Date(dateToCheck);
-    const orderDateStr = `${orderDate.getFullYear()}-${String(
-      orderDate.getMonth() + 1
-    ).padStart(2, "0")}-${String(orderDate.getDate()).padStart(2, "0")}`;
-    return orderDateStr === todayStr;
+    // Use paidAt date for revenue recognition
+    const paidDate = new Date(order.paidAt);
+    const paidDateStr = `${paidDate.getFullYear()}-${String(
+      paidDate.getMonth() + 1
+    ).padStart(2, "0")}-${String(paidDate.getDate()).padStart(2, "0")}`;
+    return paidDateStr === todayStr;
   });
 
   // Group by payment method
@@ -305,12 +306,12 @@ export const getOrdersForExport = async (startDate, endDate) => {
   const orders = await db.orders.toArray();
 
   return orders.filter((order) => {
-    if (order.status !== "Released") return false;
+    // Only include paid orders in revenue export
+    if (!order.paidAt) return false;
 
-    // Use releasedAt if available, otherwise fall back to createdAt
-    const dateToCheck = order.releasedAt || order.createdAt;
-    const orderDate = new Date(dateToCheck);
-    return orderDate >= startDate && orderDate <= endDate;
+    // Use paidAt date for revenue recognition
+    const paidDate = new Date(order.paidAt);
+    return paidDate >= startDate && paidDate <= endDate;
   });
 };
 

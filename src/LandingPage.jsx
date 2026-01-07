@@ -47,10 +47,13 @@ function LandingPage({ onLogin }) {
     <Box
       sx={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #ffbd59 0%, #ffcf85 100%)",
+        background:
+          "linear-gradient(135deg, #1e3a5f 0%, #375da5 50%, #ffbd59 100%)",
         py: { xs: 2, sm: 4 },
         display: "flex",
         alignItems: "center",
+        position: "relative",
+        overflow: "hidden",
       }}
     >
       <Container maxWidth="sm">
@@ -76,15 +79,16 @@ function LandingPage({ onLogin }) {
             variant="h4"
             sx={{
               fontWeight: 700,
-              color: "#375da5",
+              color: "white",
               fontSize: { xs: "1.5rem", sm: "2rem", md: "2.5rem" },
+              textShadow: "0 2px 10px rgba(0,0,0,0.3)",
             }}
           >
             Ian's Laundry Hub
           </Typography>
           <Typography
             sx={{
-              color: "#1e3a5f",
+              color: "rgba(255,255,255,0.9)",
               fontSize: { xs: "0.9rem", sm: "1.1rem" },
               mt: 1,
             }}
@@ -207,8 +211,7 @@ function LandingPage({ onLogin }) {
           sx={{
             textAlign: "center",
             mt: 4,
-            color: "#1e3a5f",
-            opacity: 0.7,
+            color: "rgba(255,255,255,0.7)",
           }}
         >
           <Typography variant="body2">

@@ -184,7 +184,8 @@ function App() {
       <Box
         sx={{
           minHeight: "100vh",
-          background: "linear-gradient(135deg, #ffbd59 0%, #ffcf85 100%)",
+          background:
+            "linear-gradient(135deg, #1e3a5f 0%, #375da5 50%, #ffbd59 100%)",
         }}
       >
         {/* Header */}
