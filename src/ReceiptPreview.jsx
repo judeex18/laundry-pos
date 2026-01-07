@@ -1,6 +1,6 @@
+import { useState, useEffect } from "react";
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
   Typography,
   Divider,
@@ -8,6 +8,9 @@ import {
   Box,
   Stack,
   Avatar,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import LocalLaundryServiceIcon from "@mui/icons-material/LocalLaundryService";
@@ -16,9 +19,57 @@ import PhoneIcon from "@mui/icons-material/Phone";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import PaymentsIcon from "@mui/icons-material/Payments";
+import PaidIcon from "@mui/icons-material/Paid";
 
-export default function ReceiptPreview({ open, onClose, data }) {
+export default function ReceiptPreview({
+  open,
+  onClose,
+  data,
+  onPaymentUpdate,
+}) {
+  const [paymentMethod, setPaymentMethod] = useState("Cash");
+  const [amountPaid, setAmountPaid] = useState("");
+  const [gcashNumber, setGcashNumber] = useState("");
+  const [gcashRefNumber, setGcashRefNumber] = useState("");
+
+  // Reset form when dialog opens/closes
+  useEffect(() => {
+    if (open && data) {
+      setPaymentMethod(data.method === "Unpaid" ? "Cash" : data.method);
+      setAmountPaid(data.amountPaid ? String(data.amountPaid) : "");
+      setGcashNumber(data.gcashNumber || "");
+      setGcashRefNumber(data.gcashRefNumber || "");
+    }
+  }, [open, data]);
+
   if (!data) return null;
+
+  const isPaid = data.method && data.method !== "Unpaid";
+  const change = amountPaid
+    ? Math.max(0, Number(amountPaid) - Number(data.total))
+    : 0;
+
+  const handlePayment = () => {
+    if (!amountPaid || Number(amountPaid) < Number(data.total)) {
+      return;
+    }
+
+    const paymentData = {
+      method: paymentMethod,
+      amountPaid: Number(amountPaid),
+      change: change,
+    };
+
+    if (paymentMethod === "GCash") {
+      paymentData.gcashNumber = gcashNumber;
+      paymentData.gcashRefNumber = gcashRefNumber;
+    }
+
+    if (onPaymentUpdate && data.id) {
+      onPaymentUpdate(data.id, paymentData);
+    }
+  };
 
   return (
     <Dialog
@@ -33,31 +84,37 @@ export default function ReceiptPreview({ open, onClose, data }) {
         },
       }}
     >
-      {/* Success Header */}
+      {/* Header */}
       <Box
         sx={{
-          background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+          background: isPaid
+            ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
+            : "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)",
           color: "white",
-          py: 4,
+          py: 3,
           textAlign: "center",
         }}
       >
         <Avatar
           sx={{
-            width: 64,
-            height: 64,
+            width: 56,
+            height: 56,
             background: "rgba(255,255,255,0.2)",
             mx: "auto",
-            mb: 2,
+            mb: 1.5,
           }}
         >
-          <CheckCircleIcon sx={{ fontSize: 40 }} />
+          {isPaid ? (
+            <CheckCircleIcon sx={{ fontSize: 32 }} />
+          ) : (
+            <ReceiptIcon sx={{ fontSize: 32 }} />
+          )}
         </Avatar>
-        <Typography variant="h5" fontWeight={700}>
-          Payment Successful!
+        <Typography variant="h6" fontWeight={700}>
+          {isPaid ? "Payment Complete" : "Order Receipt"}
         </Typography>
         <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
-          Thank you for your order
+          {isPaid ? "Thank you for your payment" : "Process payment below"}
         </Typography>
       </Box>
 
@@ -80,9 +137,6 @@ export default function ReceiptPreview({ open, onClose, data }) {
             <Typography variant="h6" fontWeight={700}>
               {data.receiptNumber}
             </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.8 }}>
-              Use this to track your order status
-            </Typography>
           </Box>
         )}
 
@@ -92,10 +146,10 @@ export default function ReceiptPreview({ open, onClose, data }) {
             p: 2,
             background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
             borderRadius: 2,
-            mb: 3,
+            mb: 2,
           }}
         >
-          <Stack spacing={1.5}>
+          <Stack spacing={1}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
               <PersonIcon sx={{ color: "primary.main", fontSize: 20 }} />
               <Typography variant="body2" color="text.secondary">
@@ -129,50 +183,16 @@ export default function ReceiptPreview({ open, onClose, data }) {
           </Stack>
         </Box>
 
-        {/* GCash Reference Number */}
-        {data.method === "GCash" && data.gcashRefNumber && (
-          <Box
-            sx={{
-              p: 2,
-              background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-              borderRadius: 2,
-              mb: 3,
-              color: "white",
-            }}
-          >
-            <Stack spacing={1}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                <AccountBalanceWalletIcon sx={{ fontSize: 20 }} />
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                  GCash Number
-                </Typography>
-                <Typography fontWeight={600} sx={{ ml: "auto" }}>
-                  {data.gcashNumber}
-                </Typography>
-              </Box>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                <ReceiptIcon sx={{ fontSize: 20 }} />
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                  Reference No.
-                </Typography>
-                <Typography fontWeight={700} sx={{ ml: "auto" }}>
-                  {data.gcashRefNumber}
-                </Typography>
-              </Box>
-            </Stack>
-          </Box>
-        )}
-
-        {/* Order Items */}
+        {/* Order Items - Cashier Style */}
         <Typography
           variant="subtitle2"
           color="text.secondary"
-          sx={{ mb: 1.5, display: "flex", alignItems: "center", gap: 1 }}
+          sx={{ mb: 1, display: "flex", alignItems: "center", gap: 1 }}
         >
           <ReceiptIcon fontSize="small" /> Order Details
         </Typography>
 
-        <Stack spacing={1.5} sx={{ mb: 2 }}>
+        <Stack spacing={1} sx={{ mb: 2 }}>
           {data.items.map((item, i) => (
             <Box
               key={i}
@@ -202,7 +222,7 @@ export default function ReceiptPreview({ open, onClose, data }) {
                     {item.name}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {item.loads} load(s) × ₱{item.price}
+                    ₱{item.price} × {item.loads}
                   </Typography>
                 </Box>
               </Box>
@@ -215,12 +235,9 @@ export default function ReceiptPreview({ open, onClose, data }) {
 
         <Divider sx={{ my: 2 }} />
 
-        {/* Total & Payment Method */}
+        {/* Cashier Section */}
         <Box
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
             p: 2,
             background: "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)",
             borderRadius: 2,
@@ -228,31 +245,307 @@ export default function ReceiptPreview({ open, onClose, data }) {
             mb: 2,
           }}
         >
-          <Box>
-            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+          {/* Total Amount */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: isPaid ? 1 : 0,
+            }}
+          >
+            <Typography variant="body1" fontWeight={500}>
               Total Amount
             </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.8 }}>
-              Paid via {data.method}
+            <Typography variant="h5" fontWeight={700}>
+              ₱{Number(data.total).toFixed(2)}
             </Typography>
           </Box>
-          <Typography variant="h4" fontWeight={700}>
-            ₱{data.total}
-          </Typography>
+
+          {/* If already paid, show payment info */}
+          {isPaid && (
+            <>
+              <Divider sx={{ my: 1.5, borderColor: "rgba(255,255,255,0.2)" }} />
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 1,
+                }}
+              >
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  Payment Method
+                </Typography>
+                <Typography fontWeight={600}>{data.method}</Typography>
+              </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 1,
+                }}
+              >
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  Amount Paid
+                </Typography>
+                <Typography fontWeight={600}>
+                  ₱{Number(data.amountPaid || data.total).toFixed(2)}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  Change
+                </Typography>
+                <Typography fontWeight={700} sx={{ color: "#4ade80" }}>
+                  ₱{Number(data.change || 0).toFixed(2)}
+                </Typography>
+              </Box>
+            </>
+          )}
         </Box>
 
+        {/* GCash Info if paid via GCash */}
+        {isPaid && data.method === "GCash" && data.gcashRefNumber && (
+          <Box
+            sx={{
+              p: 2,
+              background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+              borderRadius: 2,
+              mb: 2,
+              color: "white",
+            }}
+          >
+            <Stack spacing={1}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <AccountBalanceWalletIcon sx={{ fontSize: 20 }} />
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  GCash Number
+                </Typography>
+                <Typography fontWeight={600} sx={{ ml: "auto" }}>
+                  {data.gcashNumber}
+                </Typography>
+              </Box>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <ReceiptIcon sx={{ fontSize: 20 }} />
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  Reference No.
+                </Typography>
+                <Typography fontWeight={700} sx={{ ml: "auto" }}>
+                  {data.gcashRefNumber}
+                </Typography>
+              </Box>
+            </Stack>
+          </Box>
+        )}
+
+        {/* Payment Form - Only show if unpaid and onPaymentUpdate is provided */}
+        {!isPaid && onPaymentUpdate && (
+          <Box sx={{ mt: 2 }}>
+            <Typography
+              variant="subtitle2"
+              color="text.secondary"
+              sx={{ mb: 1.5, display: "flex", alignItems: "center", gap: 1 }}
+            >
+              <PaidIcon fontSize="small" /> Process Payment
+            </Typography>
+
+            {/* Payment Method Toggle */}
+            <ToggleButtonGroup
+              value={paymentMethod}
+              exclusive
+              onChange={(e, newMethod) => {
+                if (newMethod) setPaymentMethod(newMethod);
+              }}
+              fullWidth
+              sx={{ mb: 2 }}
+            >
+              <ToggleButton
+                value="Cash"
+                sx={{
+                  py: 1.5,
+                  fontWeight: 600,
+                  "&.Mui-selected": {
+                    background:
+                      "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                    color: "white",
+                    "&:hover": {
+                      background:
+                        "linear-gradient(135deg, #059669 0%, #047857 100%)",
+                    },
+                  },
+                }}
+              >
+                <PaymentsIcon sx={{ mr: 1 }} />
+                Cash
+              </ToggleButton>
+              <ToggleButton
+                value="GCash"
+                sx={{
+                  py: 1.5,
+                  fontWeight: 600,
+                  "&.Mui-selected": {
+                    background:
+                      "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                    color: "white",
+                    "&:hover": {
+                      background:
+                        "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+                    },
+                  },
+                }}
+              >
+                <AccountBalanceWalletIcon sx={{ mr: 1 }} />
+                GCash
+              </ToggleButton>
+            </ToggleButtonGroup>
+
+            {/* GCash Fields */}
+            {paymentMethod === "GCash" && (
+              <Stack spacing={2} sx={{ mb: 2 }}>
+                {/* QR Code */}
+                <Box sx={{ textAlign: "center" }}>
+                  <Box
+                    component="img"
+                    src="/GcashQR.jpg"
+                    alt="GCash QR Code"
+                    sx={{
+                      maxWidth: "100%",
+                      height: "auto",
+                      maxHeight: 180,
+                      borderRadius: 2,
+                      border: "2px solid #e2e8f0",
+                    }}
+                  />
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ display: "block", mt: 1 }}
+                  >
+                    Scan QR code to pay
+                  </Typography>
+                </Box>
+                <TextField
+                  fullWidth
+                  label="GCash Number"
+                  value={gcashNumber}
+                  onChange={(e) => setGcashNumber(e.target.value)}
+                  placeholder="09XX XXX XXXX"
+                  size="small"
+                />
+                <TextField
+                  fullWidth
+                  label="Reference Number"
+                  value={gcashRefNumber}
+                  onChange={(e) => setGcashRefNumber(e.target.value)}
+                  placeholder="Enter GCash reference number"
+                  size="small"
+                />
+              </Stack>
+            )}
+
+            {/* Amount Input */}
+            <TextField
+              fullWidth
+              label="Amount Received"
+              type="number"
+              value={amountPaid}
+              onChange={(e) => setAmountPaid(e.target.value)}
+              placeholder={`Min: ₱${Number(data.total).toFixed(2)}`}
+              sx={{ mb: 2 }}
+              InputProps={{
+                startAdornment: (
+                  <Typography sx={{ mr: 1, color: "text.secondary" }}>
+                    ₱
+                  </Typography>
+                ),
+              }}
+              error={
+                amountPaid !== "" && Number(amountPaid) < Number(data.total)
+              }
+              helperText={
+                amountPaid !== "" && Number(amountPaid) < Number(data.total)
+                  ? "Amount must be at least ₱" + Number(data.total).toFixed(2)
+                  : ""
+              }
+            />
+
+            {/* Change Display */}
+            {amountPaid && Number(amountPaid) >= Number(data.total) && (
+              <Box
+                sx={{
+                  p: 2,
+                  background:
+                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  borderRadius: 2,
+                  color: "white",
+                  mb: 2,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography fontWeight={500}>Change</Typography>
+                <Typography variant="h5" fontWeight={700}>
+                  ₱{change.toFixed(2)}
+                </Typography>
+              </Box>
+            )}
+
+            {/* Submit Payment Button */}
+            <Button
+              fullWidth
+              variant="contained"
+              size="large"
+              onClick={handlePayment}
+              disabled={
+                !amountPaid ||
+                Number(amountPaid) < Number(data.total) ||
+                (paymentMethod === "GCash" && (!gcashNumber || !gcashRefNumber))
+              }
+              sx={{
+                py: 1.5,
+                borderRadius: 2,
+                fontWeight: 700,
+                background:
+                  paymentMethod === "GCash"
+                    ? "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)"
+                    : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                "&:hover": {
+                  background:
+                    paymentMethod === "GCash"
+                      ? "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)"
+                      : "linear-gradient(135deg, #059669 0%, #047857 100%)",
+                },
+              }}
+            >
+              <PaidIcon sx={{ mr: 1 }} />
+              Confirm Payment
+            </Button>
+          </Box>
+        )}
+
+        {/* Close Button */}
         <Button
           fullWidth
-          variant="contained"
+          variant={isPaid ? "contained" : "outlined"}
           size="large"
           onClick={onClose}
           sx={{
+            mt: 2,
             py: 1.5,
             borderRadius: 2,
             fontWeight: 600,
           }}
         >
-          Done
+          {isPaid ? "Done" : "Close"}
         </Button>
       </DialogContent>
     </Dialog>

@@ -11,13 +11,20 @@ import {
   Paper,
   Avatar,
   LinearProgress,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import LocalLaundryServiceIcon from "@mui/icons-material/LocalLaundryService";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import PersonIcon from "@mui/icons-material/Person";
 import PhoneIcon from "@mui/icons-material/Phone";
 import ReceiptIcon from "@mui/icons-material/Receipt";
-import { getOrders, updateOrderStatus } from "./db/database";
+import PaidIcon from "@mui/icons-material/Paid";
+import {
+  getOrders,
+  updateOrderStatus,
+  updateOrderPayment,
+} from "./db/database";
 import ReceiptPreview from "./ReceiptPreview";
 
 // Order workflow
@@ -26,6 +33,11 @@ const STATUSES = ["Received", "Washing", "Drying", "Ready", "Released"];
 export default function OrderBoard() {
   const [orders, setOrders] = useState([]);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "info",
+  });
 
   // =====================
   // LOAD ORDERS FROM INDEXEDDB
@@ -109,6 +121,36 @@ export default function OrderBoard() {
   };
 
   const statusCounts = getStatusCounts();
+
+  // =====================
+  // CHECK IF ORDER IS PAID
+  // =====================
+  const isPaid = (order) => {
+    return order.paymentMethod && order.paymentMethod !== "Unpaid";
+  };
+
+  // =====================
+  // HANDLE PAYMENT UPDATE
+  // =====================
+  const handlePaymentUpdate = async (orderId, paymentData) => {
+    try {
+      await updateOrderPayment(orderId, paymentData);
+      setSnackbar({
+        open: true,
+        message: `Payment recorded! Method: ${paymentData.method}`,
+        severity: "success",
+      });
+      fetchOrders();
+      setSelectedReceipt(null);
+    } catch (error) {
+      console.error("Failed to update payment:", error);
+      setSnackbar({
+        open: true,
+        message: "Failed to update payment",
+        severity: "error",
+      });
+    }
+  };
 
   // =====================
   // FORMAT DATE
@@ -214,6 +256,9 @@ export default function OrderBoard() {
                     borderRadius: { xs: 2, sm: 3 },
                     overflow: "hidden",
                     transition: "all 0.3s ease",
+                    border: isPaid(order)
+                      ? "3px solid #10b981"
+                      : "3px solid #ef4444",
                     "&:hover": {
                       boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
                       transform: "translateY(-2px)",
@@ -375,14 +420,32 @@ export default function OrderBoard() {
                       alignItems="center"
                       sx={{ mb: 2 }}
                     >
-                      <Chip
-                        label={`₱${Number(order.total).toFixed(2)}`}
-                        color="primary"
-                        sx={{
-                          fontWeight: 700,
-                          fontSize: { xs: "0.75rem", sm: "0.9rem" },
-                        }}
-                      />
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Chip
+                          label={`₱${Number(order.total).toFixed(2)}`}
+                          color="primary"
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: { xs: "0.75rem", sm: "0.9rem" },
+                          }}
+                        />
+                        <Chip
+                          icon={
+                            <PaidIcon sx={{ fontSize: "16px !important" }} />
+                          }
+                          label={isPaid(order) ? "Paid" : "Unpaid"}
+                          size="small"
+                          sx={{
+                            fontWeight: 600,
+                            fontSize: { xs: "0.65rem", sm: "0.75rem" },
+                            bgcolor: isPaid(order) ? "#10b981" : "#ef4444",
+                            color: "white",
+                            "& .MuiChip-icon": {
+                              color: "white",
+                            },
+                          }}
+                        />
+                      </Stack>
                       <Typography
                         variant="caption"
                         color="text.secondary"
@@ -402,15 +465,18 @@ export default function OrderBoard() {
                         }
                         onClick={() =>
                           setSelectedReceipt({
+                            id: order.id,
                             receiptNumber: order.receiptNumber,
                             customer: order.customerName,
                             phone: order.phone,
                             items: order.items,
                             total: order.total,
-                            method: order.paymentMethod || "Cash",
+                            method: order.paymentMethod || "Unpaid",
                             date: formatDate(order.createdAt),
                             gcashNumber: order.gcashNumber,
                             gcashRefNumber: order.gcashRefNumber,
+                            amountPaid: order.amountPaid,
+                            change: order.change,
                           })
                         }
                         sx={{
@@ -430,6 +496,10 @@ export default function OrderBoard() {
                           STATUSES.indexOf(status) <=
                           STATUSES.indexOf(order.status);
 
+                        // Can't release if not paid
+                        const cantReleaseUnpaid =
+                          status === "Released" && !isPaid(order);
+
                         return (
                           <Button
                             key={status}
@@ -439,7 +509,8 @@ export default function OrderBoard() {
                             size="small"
                             onClick={() => handleUpdateStatus(order, status)}
                             disabled={
-                              isCurrentOrPast && status !== order.status
+                              (isCurrentOrPast && status !== order.status) ||
+                              cantReleaseUnpaid
                             }
                             startIcon={
                               order.status === status ? (
@@ -458,6 +529,9 @@ export default function OrderBoard() {
                               ...(order.status === status && {
                                 background: statusConfig[status]?.bg,
                                 borderColor: "transparent",
+                              }),
+                              ...(cantReleaseUnpaid && {
+                                opacity: 0.5,
                               }),
                             }}
                           >
@@ -568,15 +642,18 @@ export default function OrderBoard() {
                         }
                         onClick={() =>
                           setSelectedReceipt({
+                            id: order.id,
                             receiptNumber: order.receiptNumber,
                             customer: order.customerName,
                             phone: order.phone,
                             items: order.items,
                             total: order.total,
-                            method: order.paymentMethod || "Cash",
+                            method: order.paymentMethod || "Unpaid",
                             date: formatDate(order.createdAt),
                             gcashNumber: order.gcashNumber,
                             gcashRefNumber: order.gcashRefNumber,
+                            amountPaid: order.amountPaid,
+                            change: order.change,
                           })
                         }
                         sx={{
@@ -601,7 +678,24 @@ export default function OrderBoard() {
         open={Boolean(selectedReceipt)}
         data={selectedReceipt}
         onClose={() => setSelectedReceipt(null)}
+        onPaymentUpdate={handlePaymentUpdate}
       />
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

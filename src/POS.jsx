@@ -15,10 +15,6 @@ import {
   Avatar,
   Snackbar,
   Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
@@ -28,8 +24,6 @@ import IronIcon from "@mui/icons-material/Iron";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import PersonIcon from "@mui/icons-material/Person";
 import PhoneIcon from "@mui/icons-material/Phone";
-import PaymentsIcon from "@mui/icons-material/Payments";
-import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import ReceiptPreview from "./ReceiptPreview";
 import {
   getServices,
@@ -50,9 +44,6 @@ export default function POS() {
     message: "",
     severity: "info",
   });
-  const [gcashDialogOpen, setGcashDialogOpen] = useState(false);
-  const [gcashNumber, setGcashNumber] = useState("");
-  const [gcashRefNumber, setGcashRefNumber] = useState("");
 
   // =====================
   // LOAD SERVICES FROM INDEXEDDB
@@ -134,9 +125,9 @@ export default function POS() {
   };
 
   // =====================
-  // PAY - SAVE TO INDEXEDDB
+  // CREATE ORDER - SAVE TO INDEXEDDB
   // =====================
-  const pay = async (method, gcashDetails = null) => {
+  const pay = async (method) => {
     if (!customer || !phone || total === 0) {
       setSnackbar({
         open: true,
@@ -153,10 +144,6 @@ export default function POS() {
       total,
       method,
       date: new Date().toLocaleString(),
-      ...(gcashDetails && {
-        gcashNumber: gcashDetails.gcashNumber,
-        gcashRefNumber: gcashDetails.gcashRefNumber,
-      }),
     };
 
     try {
@@ -164,7 +151,7 @@ export default function POS() {
       setReceipt({ ...orderData, receiptNumber: result.receiptNumber });
       setSnackbar({
         open: true,
-        message: `Order saved! Receipt #${result.receiptNumber}`,
+        message: `Order created! Receipt #${result.receiptNumber}`,
         severity: "success",
       });
       resetPOS();
@@ -176,45 +163,6 @@ export default function POS() {
         severity: "error",
       });
     }
-  };
-
-  // =====================
-  // GCASH PAYMENT HANDLER
-  // =====================
-  const handleGcashPayment = () => {
-    if (!customer || !phone || total === 0) {
-      setSnackbar({
-        open: true,
-        message: "Please enter customer details and select services",
-        severity: "warning",
-      });
-      return;
-    }
-    setGcashDialogOpen(true);
-  };
-
-  const handleGcashSubmit = () => {
-    if (!gcashNumber.trim() || !gcashRefNumber.trim()) {
-      setSnackbar({
-        open: true,
-        message: "Please enter GCash number and reference number",
-        severity: "warning",
-      });
-      return;
-    }
-    setGcashDialogOpen(false);
-    pay("GCash", {
-      gcashNumber: gcashNumber.trim(),
-      gcashRefNumber: gcashRefNumber.trim(),
-    });
-    setGcashNumber("");
-    setGcashRefNumber("");
-  };
-
-  const handleGcashCancel = () => {
-    setGcashDialogOpen(false);
-    setGcashNumber("");
-    setGcashRefNumber("");
   };
 
   const resetPOS = () => {
@@ -618,49 +566,27 @@ export default function POS() {
               </Typography>
             </Box>
 
-            {/* Payment Buttons */}
-            <Stack spacing={1.5}>
-              <Button
-                fullWidth
-                variant="contained"
-                size="large"
-                onClick={() => pay("Cash")}
-                startIcon={<PaymentsIcon />}
-                disabled={items.length === 0}
-                sx={{
-                  py: { xs: 1, sm: 1.5 },
-                  fontSize: { xs: "0.85rem", sm: "1rem" },
+            {/* Create Order Button */}
+            <Button
+              fullWidth
+              variant="contained"
+              size="large"
+              onClick={() => pay("Unpaid")}
+              startIcon={<ShoppingCartIcon />}
+              disabled={items.length === 0}
+              sx={{
+                py: { xs: 1.5, sm: 2 },
+                fontSize: { xs: "0.9rem", sm: "1.1rem" },
+                fontWeight: 700,
+                background: "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)",
+                "&:hover": {
                   background:
-                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                  "&:hover": {
-                    background:
-                      "linear-gradient(135deg, #059669 0%, #047857 100%)",
-                  },
-                }}
-              >
-                Cash
-              </Button>
-              <Button
-                fullWidth
-                variant="contained"
-                size="large"
-                onClick={handleGcashPayment}
-                startIcon={<AccountBalanceWalletIcon />}
-                disabled={items.length === 0}
-                sx={{
-                  py: { xs: 1, sm: 1.5 },
-                  fontSize: { xs: "0.85rem", sm: "1rem" },
-                  background:
-                    "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-                  "&:hover": {
-                    background:
-                      "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
-                  },
-                }}
-              >
-                GCash
-              </Button>
-            </Stack>
+                    "linear-gradient(135deg, #2a4a8a 0%, #1e3a6e 100%)",
+                },
+              }}
+            >
+              Create Order
+            </Button>
           </Paper>
         </Grid>
       </Grid>
@@ -670,104 +596,6 @@ export default function POS() {
         data={receipt}
         onClose={() => setReceipt(null)}
       />
-
-      {/* GCash Payment Dialog */}
-      <Dialog
-        open={gcashDialogOpen}
-        onClose={handleGcashCancel}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            overflow: "hidden",
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-            color: "white",
-            textAlign: "center",
-            py: 2,
-          }}
-        >
-          <AccountBalanceWalletIcon sx={{ fontSize: 40, mb: 1 }} />
-          <Typography variant="h6" fontWeight={700}>
-            GCash Payment
-          </Typography>
-          <Typography variant="body2" sx={{ opacity: 0.9 }}>
-            Total: ₱{total.toFixed(2)}
-          </Typography>
-        </DialogTitle>
-        <DialogContent sx={{ p: 3 }}>
-          {/* QR Code */}
-          <Box
-            sx={{
-              textAlign: "center",
-              mb: 3,
-            }}
-          >
-            <Box
-              component="img"
-              src="/GcashQR.jpg"
-              alt="GCash QR Code"
-              sx={{
-                maxWidth: "100%",
-                height: "auto",
-                maxHeight: 250,
-                borderRadius: 2,
-                border: "2px solid #e2e8f0",
-              }}
-            />
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Scan QR code to pay
-            </Typography>
-          </Box>
-
-          {/* GCash Details Input */}
-          <Stack spacing={2}>
-            <TextField
-              fullWidth
-              label="GCash Number"
-              value={gcashNumber}
-              onChange={(e) => setGcashNumber(e.target.value)}
-              placeholder="09XX XXX XXXX"
-              variant="outlined"
-            />
-            <TextField
-              fullWidth
-              label="Reference Number"
-              value={gcashRefNumber}
-              onChange={(e) => setGcashRefNumber(e.target.value)}
-              placeholder="Enter GCash reference number"
-              variant="outlined"
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ p: 2, pt: 0 }}>
-          <Button
-            onClick={handleGcashCancel}
-            variant="outlined"
-            sx={{ flex: 1 }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleGcashSubmit}
-            variant="contained"
-            sx={{
-              flex: 1,
-              background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-              "&:hover": {
-                background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
-              },
-            }}
-          >
-            Submit Payment
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Snackbar for notifications */}
       <Snackbar

@@ -169,6 +169,34 @@ export const updateOrderStatus = async (id, status) => {
   return result;
 };
 
+// Update order payment (for cashier functionality)
+export const updateOrderPayment = async (id, paymentData) => {
+  const updateData = {
+    paymentMethod: paymentData.method,
+    amountPaid: paymentData.amountPaid,
+    change: paymentData.change,
+    paidAt: new Date().toISOString(),
+  };
+
+  // Add GCash details if applicable
+  if (paymentData.method === "GCash") {
+    updateData.gcashNumber = paymentData.gcashNumber || null;
+    updateData.gcashRefNumber = paymentData.gcashRefNumber || null;
+  }
+
+  const result = await db.orders.update(id, updateData);
+
+  // Get the updated order and sync to Supabase
+  const order = await db.orders.get(id);
+  if (order) {
+    syncOrderToSupabase(order).catch(() => {
+      console.log("⚠️ Payment sync failed, updated locally");
+    });
+  }
+
+  return result;
+};
+
 // Track order by receipt number (for customer tracking)
 export const trackOrder = async (receiptNumber) => {
   // Try exact match first
