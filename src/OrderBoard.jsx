@@ -133,6 +133,52 @@ export default function OrderBoard() {
   };
 
   // =====================
+  // CHECK SERVICE TYPE FOR SMART STATUS BUTTONS
+  // =====================
+  const getSkippedStatuses = (order) => {
+    if (!order.items || order.items.length === 0) return [];
+
+    const skipped = [];
+    const itemNames = order.items.map((item) => item.name.toLowerCase());
+
+    // Get main service items (exclude add-ons like Downy, Zonrox, Liquid Detergent)
+    const addOns = ["downy", "zonrox", "liquid detergent"];
+    const mainServices = itemNames.filter(
+      (name) => !addOns.some((addon) => name.includes(addon))
+    );
+
+    if (mainServices.length === 0) return []; // Only add-ons, show all statuses
+
+    // Check service types in main services
+    const hasDryOnly = mainServices.some((name) => name.includes("dry only"));
+    const hasWashOnly = mainServices.some((name) => name.includes("wash only"));
+    const hasIronOnly = mainServices.every((name) => name === "iron");
+    const hasFullService = mainServices.some(
+      (name) => name.includes("wash") && name.includes("dry")
+    );
+
+    // If full service (Wash, Dry & Fold), don't skip anything
+    if (hasFullService) return [];
+
+    // If iron only (no wash/dry services), skip both
+    if (hasIronOnly) {
+      return ["Washing", "Drying"];
+    }
+
+    // If dry only, skip washing
+    if (hasDryOnly && !hasWashOnly) {
+      skipped.push("Washing");
+    }
+
+    // If wash only, skip drying
+    if (hasWashOnly && !hasDryOnly) {
+      skipped.push("Drying");
+    }
+
+    return skipped;
+  };
+
+  // =====================
   // HANDLE PAYMENT UPDATE
   // =====================
   const handlePaymentUpdate = async (orderId, paymentData) => {
@@ -477,41 +523,81 @@ export default function OrderBoard() {
                       </Stack>
 
                       {/* Order Items */}
-                      {order.items && order.items.length > 0 && (
-                        <Box sx={{ mb: 2 }}>
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              fontWeight: 700,
-                              color: "#64748b",
-                              textTransform: "uppercase",
-                              letterSpacing: 0.5,
-                            }}
-                          >
-                            Services
-                          </Typography>
-                          <Stack
-                            direction="row"
-                            spacing={0.5}
-                            flexWrap="wrap"
-                            sx={{ mt: 1 }}
-                          >
-                            {order.items.map((item, idx) => (
-                              <Chip
+                      <Box sx={{ mb: 2, height: 80 }}>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            fontWeight: 700,
+                            color: "#64748b",
+                            textTransform: "uppercase",
+                            letterSpacing: 0.5,
+                          }}
+                        >
+                          Services
+                        </Typography>
+                        <Box
+                          sx={{
+                            mt: 1,
+                            height: 56,
+                            overflowY: "auto",
+                            "&::-webkit-scrollbar": {
+                              width: 4,
+                            },
+                            "&::-webkit-scrollbar-thumb": {
+                              bgcolor: "#cbd5e1",
+                              borderRadius: 2,
+                            },
+                          }}
+                        >
+                          {order.items && order.items.length > 0 ? (
+                            order.items.map((item, idx) => (
+                              <Box
                                 key={idx}
-                                label={`${item.name} ×${item.loads}`}
-                                size="small"
                                 sx={{
-                                  fontSize: "0.7rem",
-                                  mb: 0.5,
-                                  bgcolor: "#f1f5f9",
-                                  fontWeight: 600,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  py: 0.3,
+                                  borderBottom:
+                                    idx < order.items.length - 1
+                                      ? "1px dashed #e2e8f0"
+                                      : "none",
                                 }}
-                              />
-                            ))}
-                          </Stack>
+                              >
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontSize: "0.8rem",
+                                    color: "#1e3a5f",
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {item.name}
+                                </Typography>
+                                <Chip
+                                  label={`×${item.loads}`}
+                                  size="small"
+                                  sx={{
+                                    height: 20,
+                                    fontSize: "0.7rem",
+                                    fontWeight: 700,
+                                    bgcolor: "#375da5",
+                                    color: "white",
+                                    minWidth: 36,
+                                  }}
+                                />
+                              </Box>
+                            ))
+                          ) : (
+                            <Typography
+                              variant="body2"
+                              sx={{ color: "#9ca3af", fontSize: "0.8rem" }}
+                            >
+                              No services
+                            </Typography>
+                          )}
                         </Box>
-                      )}
+                      </Box>
 
                       {/* Total & Payment Status */}
                       <Paper
@@ -541,7 +627,18 @@ export default function OrderBoard() {
                           />
                           <Chip
                             icon={
-                              <PaidIcon sx={{ fontSize: "16px !important" }} />
+                              <Box
+                                component="span"
+                                sx={{
+                                  fontSize: "14px",
+                                  fontWeight: 800,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                ₱
+                              </Box>
                             }
                             label={isPaid(order) ? "PAID" : "UNPAID"}
                             size="small"
@@ -595,10 +692,16 @@ export default function OrderBoard() {
 
                       {/* Status Buttons */}
                       <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                        {STATUSES.map((status) => {
+                        {STATUSES.filter(
+                          (status) =>
+                            !getSkippedStatuses(order).includes(status)
+                        ).map((status) => {
+                          const filteredStatuses = STATUSES.filter(
+                            (s) => !getSkippedStatuses(order).includes(s)
+                          );
                           const isCurrentOrPast =
-                            STATUSES.indexOf(status) <=
-                            STATUSES.indexOf(order.status);
+                            filteredStatuses.indexOf(status) <=
+                            filteredStatuses.indexOf(order.status);
                           const cantReleaseUnpaid =
                             status === "Released" && !isPaid(order);
 

@@ -11,6 +11,7 @@ import {
   TextField,
   ToggleButton,
   ToggleButtonGroup,
+  IconButton,
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import LocalLaundryServiceIcon from "@mui/icons-material/LocalLaundryService";
@@ -21,6 +22,8 @@ import ReceiptIcon from "@mui/icons-material/Receipt";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import PaidIcon from "@mui/icons-material/Paid";
+import CloseIcon from "@mui/icons-material/Close";
+import ZoomInIcon from "@mui/icons-material/ZoomIn";
 
 export default function ReceiptPreview({
   open,
@@ -32,6 +35,7 @@ export default function ReceiptPreview({
   const [amountPaid, setAmountPaid] = useState("");
   const [gcashNumber, setGcashNumber] = useState("");
   const [gcashRefNumber, setGcashRefNumber] = useState("");
+  const [qrEnlarged, setQrEnlarged] = useState(false);
 
   // Reset form when dialog opens/closes
   useEffect(() => {
@@ -413,23 +417,59 @@ export default function ReceiptPreview({
                 {/* QR Code */}
                 <Box sx={{ textAlign: "center" }}>
                   <Box
-                    component="img"
-                    src="/GcashQR.jpg"
-                    alt="GCash QR Code"
+                    onClick={() => setQrEnlarged(true)}
                     sx={{
-                      maxWidth: "100%",
-                      height: "auto",
-                      maxHeight: 180,
-                      borderRadius: 2,
-                      border: "2px solid #e2e8f0",
+                      position: "relative",
+                      display: "inline-block",
+                      cursor: "pointer",
+                      "&:hover .zoom-overlay": {
+                        opacity: 1,
+                      },
                     }}
-                  />
+                  >
+                    <Box
+                      component="img"
+                      src="/GcashQR.jpg"
+                      alt="GCash QR Code"
+                      sx={{
+                        maxWidth: "100%",
+                        height: "auto",
+                        maxHeight: 180,
+                        borderRadius: 2,
+                        border: "2px solid #e2e8f0",
+                        transition: "transform 0.2s",
+                        "&:hover": {
+                          transform: "scale(1.02)",
+                        },
+                      }}
+                    />
+                    <Box
+                      className="zoom-overlay"
+                      sx={{
+                        position: "absolute",
+                        bottom: 8,
+                        right: 8,
+                        bgcolor: "rgba(0,0,0,0.6)",
+                        color: "white",
+                        borderRadius: "50%",
+                        width: 32,
+                        height: 32,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        opacity: 0.7,
+                        transition: "opacity 0.2s",
+                      }}
+                    >
+                      <ZoomInIcon sx={{ fontSize: 20 }} />
+                    </Box>
+                  </Box>
                   <Typography
                     variant="caption"
                     color="text.secondary"
                     sx={{ display: "block", mt: 1 }}
                   >
-                    Scan QR code to pay
+                    Tap QR code to enlarge for scanning
                   </Typography>
                 </Box>
                 <TextField
@@ -548,6 +588,68 @@ export default function ReceiptPreview({
           {isPaid ? "Done" : "Close"}
         </Button>
       </DialogContent>
+
+      {/* Enlarged QR Code Modal */}
+      <Dialog
+        open={qrEnlarged}
+        onClose={() => setQrEnlarged(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            bgcolor: "white",
+            position: "relative",
+          },
+        }}
+      >
+        <Box
+          sx={{
+            p: 3,
+            textAlign: "center",
+            background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+          }}
+        >
+          <Typography variant="h6" fontWeight={700} color="white">
+            GCash QR Code
+          </Typography>
+          <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.9)" }}>
+            Scan to pay ₱{data?.total ? Number(data.total).toFixed(2) : "0.00"}
+          </Typography>
+        </Box>
+        <Box sx={{ p: 3, textAlign: "center", bgcolor: "white" }}>
+          <Box
+            component="img"
+            src="/GcashQR.jpg"
+            alt="GCash QR Code Enlarged"
+            sx={{
+              maxWidth: "100%",
+              height: "auto",
+              maxHeight: "60vh",
+              borderRadius: 2,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+            }}
+          />
+          <Button
+            variant="contained"
+            onClick={() => setQrEnlarged(false)}
+            startIcon={<CloseIcon />}
+            sx={{
+              mt: 3,
+              px: 4,
+              py: 1.5,
+              borderRadius: 2,
+              fontWeight: 600,
+              background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+              },
+            }}
+          >
+            Close
+          </Button>
+        </Box>
+      </Dialog>
     </Dialog>
   );
 }
