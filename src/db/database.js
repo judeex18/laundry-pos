@@ -17,14 +17,8 @@ db.version(5).stores({
     "++id, inventoryId, action, quantity, note, customerName, createdAt",
 });
 
-// Default inventory items
-const DEFAULT_INVENTORY = [
-  { name: "Downy Violet", type: "downy", quantity: 50, unit: "pcs" },
-  { name: "Downy Blue", type: "downy", quantity: 50, unit: "pcs" },
-  { name: "Liquid Detergent", type: "detergent", quantity: 50, unit: "pcs" },
-  { name: "Color Safe", type: "bleach", quantity: 0, unit: "gallon" },
-  { name: "Zonrox", type: "bleach", quantity: 0, unit: "gallon" },
-];
+// Default inventory items (empty - user will add manually)
+const DEFAULT_INVENTORY = [];
 
 // Default services list
 const DEFAULT_SERVICES = [
