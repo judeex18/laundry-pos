@@ -13,10 +13,12 @@ import {
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
+import InventoryIcon from "@mui/icons-material/Inventory";
 import LogoutIcon from "@mui/icons-material/Logout";
 import POS from "./POS";
 import OrderBoard from "./OrderBoard";
 import DailyReport from "./DailyReport";
+import Inventory from "./Inventory";
 import LandingPage from "./LandingPage";
 import TrackOrder from "./TrackOrder";
 
@@ -312,6 +314,16 @@ function App() {
                   }
                   value="report"
                 />
+                <Tab
+                  icon={<InventoryIcon />}
+                  iconPosition="start"
+                  label={
+                    <Box sx={{ display: { xs: "none", sm: "block" } }}>
+                      Inventory
+                    </Box>
+                  }
+                  value="inventory"
+                />
               </Tabs>
 
               {/* Logout Button */}
@@ -352,6 +364,7 @@ function App() {
             {page === "pos" && <POS />}
             {page === "orders" && <OrderBoard />}
             {page === "report" && <DailyReport />}
+            {page === "inventory" && <Inventory />}
           </Box>
         </Container>
       </Box>

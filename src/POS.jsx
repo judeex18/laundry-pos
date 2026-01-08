@@ -18,6 +18,14 @@ import {
   Fade,
   Zoom,
   Badge,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormControl,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
@@ -29,12 +37,15 @@ import PersonIcon from "@mui/icons-material/Person";
 import PhoneIcon from "@mui/icons-material/Phone";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 import ScienceIcon from "@mui/icons-material/Science";
+import OpacityIcon from "@mui/icons-material/Opacity";
 import ReceiptPreview from "./ReceiptPreview";
 import {
   getServices,
   createOrder,
   initializeServices,
   resetServices,
+  getInventoryByType,
+  deductInventoryForOrder,
 } from "./db/database";
 
 export default function POS() {
@@ -49,6 +60,12 @@ export default function POS() {
     message: "",
     severity: "info",
   });
+
+  // Downy selection state
+  const [downyDialogOpen, setDownyDialogOpen] = useState(false);
+  const [downyOptions, setDownyOptions] = useState([]);
+  const [selectedDownyId, setSelectedDownyId] = useState(null);
+  const [pendingWashDryFold, setPendingWashDryFold] = useState(null);
 
   // =====================
   // LOAD SERVICES FROM INDEXEDDB
@@ -72,10 +89,38 @@ export default function POS() {
   // =====================
   // ADD LOAD
   // =====================
-  const addLoad = (service) => {
+  const addLoad = async (service) => {
     const price = Number(service.price) || 0;
     if (price === 0) return;
 
+    const serviceName = service.name.toLowerCase();
+
+    // Check if this is Wash, Dry & Fold - needs downy selection
+    if (
+      serviceName.includes("wash") &&
+      serviceName.includes("dry") &&
+      serviceName.includes("fold")
+    ) {
+      // Load downy options
+      const downies = await getInventoryByType("downy");
+      setDownyOptions(downies);
+      setPendingWashDryFold(service);
+
+      // If there's already a selected downy from previous selection, keep it
+      if (!selectedDownyId && downies.length > 0) {
+        setSelectedDownyId(downies[0].id);
+      }
+
+      setDownyDialogOpen(true);
+      return;
+    }
+
+    // For other services, add directly
+    addServiceToCart(service, price);
+  };
+
+  // Add service to cart (internal function)
+  const addServiceToCart = (service, price) => {
     setItems((prev) => {
       const index = prev.findIndex((i) => i.id === service.id);
       const updated = [...prev];
@@ -99,6 +144,26 @@ export default function POS() {
     });
 
     setTotal((prev) => (prev || 0) + price);
+  };
+
+  // Handle downy selection confirmation
+  const handleDownyConfirm = () => {
+    if (!selectedDownyId) {
+      setSnackbar({
+        open: true,
+        message: "Please select a Downy type",
+        severity: "warning",
+      });
+      return;
+    }
+
+    if (pendingWashDryFold) {
+      const price = Number(pendingWashDryFold.price) || 0;
+      addServiceToCart(pendingWashDryFold, price);
+    }
+
+    setDownyDialogOpen(false);
+    setPendingWashDryFold(null);
   };
 
   // =====================
@@ -149,10 +214,15 @@ export default function POS() {
       total,
       method,
       date: new Date().toLocaleString(),
+      selectedDownyId, // Store selected downy for reference
     };
 
     try {
       const result = await createOrder(orderData);
+
+      // Deduct inventory for Wash, Dry & Fold orders and add-ons
+      await deductInventoryForOrder(items, selectedDownyId, customer);
+
       setReceipt({ ...orderData, receiptNumber: result.receiptNumber });
       setSnackbar({
         open: true,
@@ -175,6 +245,7 @@ export default function POS() {
     setTotal(0);
     setCustomer("");
     setPhone("");
+    setSelectedDownyId(null);
   };
 
   // =====================
@@ -791,6 +862,152 @@ export default function POS() {
         data={receipt}
         onClose={() => setReceipt(null)}
       />
+
+      {/* Downy Selection Dialog */}
+      <Dialog
+        open={downyDialogOpen}
+        onClose={() => {
+          setDownyDialogOpen(false);
+          setPendingWashDryFold(null);
+        }}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3 },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "white",
+            fontWeight: 700,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <OpacityIcon />
+            Select Downy Type
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Choose which Downy to use for this Wash, Dry & Fold service:
+          </Typography>
+          <FormControl component="fieldset" fullWidth>
+            <RadioGroup
+              value={selectedDownyId || ""}
+              onChange={(e) => setSelectedDownyId(parseInt(e.target.value))}
+            >
+              {downyOptions.map((downy) => (
+                <Paper
+                  key={downy.id}
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    mb: 1,
+                    borderRadius: 2,
+                    border:
+                      selectedDownyId === downy.id
+                        ? "2px solid #667eea"
+                        : "2px solid #e2e8f0",
+                    background:
+                      selectedDownyId === downy.id
+                        ? "linear-gradient(135deg, #f0f0ff 0%, #e8e8ff 100%)"
+                        : "#f8fafc",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                    "&:hover": {
+                      borderColor: "#667eea",
+                    },
+                  }}
+                  onClick={() => setSelectedDownyId(downy.id)}
+                >
+                  <FormControlLabel
+                    value={downy.id}
+                    control={
+                      <Radio
+                        sx={{
+                          color: "#667eea",
+                          "&.Mui-checked": { color: "#667eea" },
+                        }}
+                      />
+                    }
+                    label={
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          width: "100%",
+                        }}
+                      >
+                        <Box>
+                          <Typography
+                            sx={{ fontWeight: 700, color: "#1e3a5f" }}
+                          >
+                            {downy.name}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            sx={{ color: "#64748b" }}
+                          >
+                            Available: {downy.quantity} {downy.unit}
+                          </Typography>
+                        </Box>
+                        <Chip
+                          label={
+                            downy.quantity > 0 ? "In Stock" : "Out of Stock"
+                          }
+                          size="small"
+                          sx={{
+                            fontWeight: 600,
+                            bgcolor: downy.quantity > 0 ? "#10b981" : "#ef4444",
+                            color: "white",
+                          }}
+                        />
+                      </Box>
+                    }
+                    sx={{
+                      m: 0,
+                      width: "100%",
+                      "& .MuiFormControlLabel-label": { width: "100%" },
+                    }}
+                  />
+                </Paper>
+              ))}
+            </RadioGroup>
+          </FormControl>
+
+          {selectedDownyId && (
+            <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>
+              Selected downy will be auto-deducted from inventory when order is
+              created.
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5 }}>
+          <Button
+            onClick={() => {
+              setDownyDialogOpen(false);
+              setPendingWashDryFold(null);
+            }}
+            sx={{ borderRadius: 2, fontWeight: 600 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleDownyConfirm}
+            disabled={!selectedDownyId}
+            sx={{
+              borderRadius: 2,
+              fontWeight: 700,
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            }}
+          >
+            Add to Order
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Snackbar for notifications */}
       <Snackbar

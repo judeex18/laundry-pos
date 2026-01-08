@@ -8,11 +8,23 @@ import Dexie from "dexie";
 const db = new Dexie("LaundryPOS");
 
 // Define schema - increment version to force update
-db.version(3).stores({
+db.version(5).stores({
   services: "++id, name, price, active",
   orders:
     "++id, receiptNumber, status, customerName, phone, total, paymentMethod, createdAt",
+  inventory: "++id, name, type, quantity, unit, createdAt, updatedAt",
+  inventoryLogs:
+    "++id, inventoryId, action, quantity, note, customerName, createdAt",
 });
+
+// Default inventory items
+const DEFAULT_INVENTORY = [
+  { name: "Downy Violet", type: "downy", quantity: 50, unit: "pcs" },
+  { name: "Downy Blue", type: "downy", quantity: 50, unit: "pcs" },
+  { name: "Liquid Detergent", type: "detergent", quantity: 50, unit: "pcs" },
+  { name: "Color Safe", type: "bleach", quantity: 0, unit: "gallon" },
+  { name: "Zonrox", type: "bleach", quantity: 0, unit: "gallon" },
+];
 
 // Default services list
 const DEFAULT_SERVICES = [
@@ -346,6 +358,13 @@ export const clearAllOrders = async () => {
   return await db.orders.clear();
 };
 
+export const clearInventory = async () => {
+  await db.inventory.clear();
+  await db.inventoryLogs.clear();
+  localStorage.setItem("inventoryCleared", "true");
+  return true;
+};
+
 export const resetDatabase = async () => {
   await db.orders.clear();
   await db.services.clear();
@@ -354,6 +373,270 @@ export const resetDatabase = async () => {
 
 // Export database instance
 export default db;
+
+// =====================
+// INVENTORY OPERATIONS
+// =====================
+
+// Initialize inventory with default items (only on first run, not after clear)
+export const initializeInventory = async () => {
+  try {
+    // Check if inventory was intentionally cleared
+    const wasCleared = localStorage.getItem("inventoryCleared");
+    if (wasCleared === "true") {
+      return; // Don't auto-initialize if user cleared inventory
+    }
+
+    const existing = await db.inventory.toArray();
+    if (existing.length === 0) {
+      const now = new Date().toISOString();
+      const itemsWithTimestamp = DEFAULT_INVENTORY.map((item) => ({
+        ...item,
+        createdAt: now,
+        updatedAt: now,
+      }));
+      await db.inventory.bulkAdd(itemsWithTimestamp);
+      console.log("✅ Default inventory initialized");
+    }
+  } catch (error) {
+    console.error("Failed to initialize inventory:", error);
+  }
+};
+
+// Get all inventory items
+export const getInventory = async () => {
+  await initializeInventory();
+  return await db.inventory.toArray();
+};
+
+// Get inventory by type (e.g., 'downy')
+export const getInventoryByType = async (type) => {
+  await initializeInventory();
+  return await db.inventory.where("type").equals(type).toArray();
+};
+
+// Get single inventory item
+export const getInventoryItem = async (id) => {
+  return await db.inventory.get(id);
+};
+
+// Add new inventory item
+export const addInventoryItem = async (name, type, quantity, unit) => {
+  // Clear the "inventoryCleared" flag when user adds new item
+  localStorage.removeItem("inventoryCleared");
+
+  const newItem = {
+    name,
+    type,
+    quantity: quantity || 0,
+    unit: unit || "pcs",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const id = await db.inventory.add(newItem);
+
+  // Log the initial stock if quantity > 0
+  if (quantity > 0) {
+    await db.inventoryLogs.add({
+      inventoryId: id,
+      action: "add",
+      quantity: quantity,
+      note: `Initial stock for ${name}`,
+      customerName: "",
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  return { id, ...newItem };
+};
+
+// Add stock to inventory
+export const addStock = async (id, quantity, note = "", customerName = "") => {
+  const item = await db.inventory.get(id);
+  if (!item) throw new Error("Inventory item not found");
+
+  const newQuantity = item.quantity + quantity;
+  await db.inventory.update(id, {
+    quantity: newQuantity,
+    updatedAt: new Date().toISOString(),
+  });
+
+  // Log the action
+  await db.inventoryLogs.add({
+    inventoryId: id,
+    action: "add",
+    quantity: quantity,
+    note: note || `Added ${quantity} ${item.unit}`,
+    customerName: customerName || "",
+    createdAt: new Date().toISOString(),
+  });
+
+  return newQuantity;
+};
+
+// Deduct stock from inventory
+export const deductStock = async (
+  id,
+  quantity,
+  note = "",
+  customerName = ""
+) => {
+  const item = await db.inventory.get(id);
+  if (!item) throw new Error("Inventory item not found");
+
+  const newQuantity = Math.max(0, item.quantity - quantity);
+  await db.inventory.update(id, {
+    quantity: newQuantity,
+    updatedAt: new Date().toISOString(),
+  });
+
+  // Log the action
+  await db.inventoryLogs.add({
+    inventoryId: id,
+    action: "deduct",
+    quantity: quantity,
+    note: note || `Deducted ${quantity} ${item.unit}`,
+    customerName: customerName || "",
+    createdAt: new Date().toISOString(),
+  });
+
+  return newQuantity;
+};
+
+// Update inventory item quantity directly
+export const updateInventoryQuantity = async (id, quantity) => {
+  return await db.inventory.update(id, {
+    quantity: quantity,
+    updatedAt: new Date().toISOString(),
+  });
+};
+
+// Get inventory logs
+export const getInventoryLogs = async (inventoryId = null) => {
+  if (inventoryId) {
+    return await db.inventoryLogs
+      .where("inventoryId")
+      .equals(inventoryId)
+      .reverse()
+      .toArray();
+  }
+  return await db.inventoryLogs.orderBy("createdAt").reverse().toArray();
+};
+
+// Deduct inventory for an order (auto-deduct for Wash, Dry & Fold and add-ons)
+export const deductInventoryForOrder = async (
+  items,
+  selectedDownyId,
+  customerName = ""
+) => {
+  const inventory = await getInventory();
+
+  for (const item of items) {
+    const itemName = item.name.toLowerCase();
+
+    // Check if it's Wash, Dry & Fold service
+    if (
+      itemName.includes("wash") &&
+      itemName.includes("dry") &&
+      itemName.includes("fold")
+    ) {
+      // Deduct liquid detergent
+      const detergent = inventory.find((inv) => inv.type === "detergent");
+      if (detergent) {
+        await deductStock(
+          detergent.id,
+          item.loads,
+          `Order: ${item.loads}x Wash, Dry & Fold`,
+          customerName
+        );
+      }
+
+      // Deduct selected downy
+      if (selectedDownyId) {
+        await deductStock(
+          selectedDownyId,
+          item.loads,
+          `Order: ${item.loads}x Wash, Dry & Fold`,
+          customerName
+        );
+      }
+    }
+
+    // Check if it's a standalone Downy add-on (not included in Wash, Dry & Fold)
+    if (itemName === "downy") {
+      // If no downy was selected for WDF, use the first available downy
+      const downyItems = inventory.filter((inv) => inv.type === "downy");
+      if (downyItems.length > 0) {
+        const targetDowny = selectedDownyId
+          ? downyItems.find((d) => d.id === selectedDownyId) || downyItems[0]
+          : downyItems[0];
+        await deductStock(
+          targetDowny.id,
+          item.loads,
+          `Add-on: ${item.loads}x Downy`,
+          customerName
+        );
+      }
+    }
+
+    // Check if it's Liquid Detergent add-on
+    if (itemName === "liquid detergent") {
+      const detergent = inventory.find((inv) => inv.type === "detergent");
+      if (detergent) {
+        await deductStock(
+          detergent.id,
+          item.loads,
+          `Add-on: ${item.loads}x Liquid Detergent`,
+          customerName
+        );
+      }
+    }
+  }
+};
+
+// Deduct single add-on item from inventory (for POS add-on clicks)
+export const deductAddOnFromInventory = async (
+  serviceName,
+  quantity = 1,
+  customerName = ""
+) => {
+  const inventory = await getInventory();
+  const name = serviceName.toLowerCase();
+
+  if (name === "downy" || name.includes("downy")) {
+    // Will be handled by selectedDownyId in order - skip here
+    return null;
+  }
+
+  if (name === "liquid detergent" || name.includes("detergent")) {
+    const detergent = inventory.find((inv) => inv.type === "detergent");
+    if (detergent) {
+      return await deductStock(
+        detergent.id,
+        quantity,
+        `POS Add-on: Liquid Detergent`,
+        customerName
+      );
+    }
+  }
+
+  return null;
+};
+
+// Get inventory item by name
+export const getInventoryByName = async (name) => {
+  const inventory = await getInventory();
+  return inventory.find((inv) => inv.name.toLowerCase() === name.toLowerCase());
+};
+
+// Reset inventory to default
+export const resetInventory = async () => {
+  await db.inventory.clear();
+  await db.inventoryLogs.clear();
+  await initializeInventory();
+  console.log("✅ Inventory reset to default");
+};
 
 // =====================
 // SYNC ALL ORDERS TO SUPABASE

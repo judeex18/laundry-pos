@@ -185,6 +185,29 @@ export default function DailyReport() {
   };
 
   const exportToExcel = (orders, start, end) => {
+    // Calculate total revenue
+    const totalRevenue = orders.reduce(
+      (sum, order) => sum + Number(order.total || 0),
+      0
+    );
+
+    // Create worksheet with header
+    const worksheet = XLSX.utils.json_to_sheet([]);
+
+    // Add header with company name
+    XLSX.utils.sheet_add_aoa(
+      worksheet,
+      [
+        ["Ian's Laundry Hub"],
+        ["Sales Report"],
+        [
+          `Date Range: ${start.toLocaleDateString()} - ${end.toLocaleDateString()}`,
+        ],
+        [""],
+      ],
+      { origin: "A1" }
+    );
+
     // Format data for Excel
     const excelData = orders.map((order, index) => ({
       "No.": index + 1,
@@ -200,27 +223,27 @@ export default function DailyReport() {
       Date: new Date(order.releasedAt || order.createdAt).toLocaleString(),
     }));
 
-    // Calculate total revenue
-    const totalRevenue = orders.reduce(
-      (sum, order) => sum + Number(order.total || 0),
-      0
+    // Add data starting from row 5
+    XLSX.utils.sheet_add_json(worksheet, excelData, { origin: "A5" });
+
+    // Add total row
+    const totalRowIndex = excelData.length + 6;
+    XLSX.utils.sheet_add_aoa(
+      worksheet,
+      [
+        [
+          "",
+          "",
+          "",
+          "",
+          `₱${totalRevenue.toLocaleString()}`,
+          "TOTAL REVENUE",
+          "",
+          "",
+        ],
+      ],
+      { origin: `A${totalRowIndex}` }
     );
-
-    // Add empty row and total row
-    excelData.push({});
-    excelData.push({
-      "No.": "",
-      "Customer Name": "",
-      "Phone Number": "",
-      Services: "",
-      "Total Amount": `₱${totalRevenue.toLocaleString()}`,
-      "Payment Method": "TOTAL REVENUE",
-      "GCash Ref#": "",
-      Date: "",
-    });
-
-    // Create worksheet
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
 
     // Set column widths
     worksheet["!cols"] = [
@@ -232,6 +255,13 @@ export default function DailyReport() {
       { wch: 15 }, // Payment Method
       { wch: 15 }, // GCash Ref#
       { wch: 20 }, // Date
+    ];
+
+    // Merge cells for header
+    worksheet["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 7 } },
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 7 } },
     ];
 
     // Create workbook
@@ -251,17 +281,32 @@ export default function DailyReport() {
     XLSX.writeFile(workbook, filename);
   };
 
-  const exportToPDF = (orders, start, end) => {
+  const exportToPDF = async (orders, start, end) => {
     const doc = new jsPDF();
+
+    // Try to add logo
+    try {
+      const logoImg = new Image();
+      logoImg.src = "/IansLogo.png";
+      await new Promise((resolve, reject) => {
+        logoImg.onload = resolve;
+        logoImg.onerror = reject;
+        setTimeout(reject, 2000); // Timeout after 2 seconds
+      });
+      doc.addImage(logoImg, "PNG", 14, 8, 25, 25);
+    } catch (e) {
+      // Logo failed to load, continue without it
+      console.log("Logo not loaded, continuing without it");
+    }
 
     // Header
     doc.setFontSize(18);
     doc.setTextColor(55, 93, 165);
-    doc.text("Ian's Laundry Shop", 105, 15, { align: "center" });
+    doc.text("Ian's Laundry Hub", 105, 18, { align: "center" });
 
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
-    doc.text("Sales Report", 105, 23, { align: "center" });
+    doc.text("Sales Report", 105, 26, { align: "center" });
 
     // Date range
     doc.setFontSize(10);
@@ -270,7 +315,7 @@ export default function DailyReport() {
       start.toDateString() === end.toDateString()
         ? `Date: ${start.toLocaleDateString()}`
         : `Date Range: ${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
-    doc.text(dateRangeText, 105, 30, { align: "center" });
+    doc.text(dateRangeText, 105, 33, { align: "center" });
 
     // Table data
     const tableData = orders.map((order, index) => [
@@ -293,7 +338,7 @@ export default function DailyReport() {
 
     // Add table
     autoTable(doc, {
-      startY: 38,
+      startY: 40,
       head: [
         [
           "#",
