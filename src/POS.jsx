@@ -101,18 +101,21 @@ export default function POS() {
       serviceName.includes("dry") &&
       serviceName.includes("fold")
     ) {
-      // Load downy options
-      const downies = await getInventoryByType("downy");
-      setDownyOptions(downies);
-      setPendingWashDryFold(service);
-
-      // If there's already a selected downy from previous selection, keep it
-      if (!selectedDownyId && downies.length > 0) {
-        setSelectedDownyId(downies[0].id);
+      if (selectedDownyId) {
+        // Downy already selected, add service directly
+        addServiceToCart(service, price);
+        return;
+      } else {
+        // Prompt for Downy selection
+        const downies = await getInventoryByType("downy");
+        setDownyOptions(downies);
+        setPendingWashDryFold(service);
+        if (downies.length > 0) {
+          setSelectedDownyId(downies[0].id);
+        }
+        setDownyDialogOpen(true);
+        return;
       }
-
-      setDownyDialogOpen(true);
-      return;
     }
 
     // For other services, add directly
