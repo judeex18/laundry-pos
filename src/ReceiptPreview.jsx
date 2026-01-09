@@ -103,13 +103,14 @@ export default function ReceiptPreview({
         const itemName = (item.name || "Item").toString();
         // Use item.loads for main service, item.qty for add-ons, fallback to 1
         const qty = item.loads || item.qty || 1;
-        const price = Number(item.price || 0).toFixed(2);
+        // Show total for this item (price * qty)
+        const itemTotal = (Number(item.price || 0) * qty).toFixed(2);
         let line = `${itemName} x${qty}`;
         // Limit item name to 18 chars for 80mm paper
         if (line.length > 18) line = line.slice(0, 18) + "…";
         // Align price to the right, no peso sign
         doc.text(line, 12, y, { maxWidth: 40 });
-        doc.text(`${price}`, 65, y, { align: "right" });
+        doc.text(`${itemTotal}`, 65, y, { align: "right" });
         y += 5;
       });
     } else {
