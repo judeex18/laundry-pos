@@ -37,4 +37,7 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    chunkSizeWarningLimit: 1500, // Suppress large chunk warning (in KB)
+  },
 });
