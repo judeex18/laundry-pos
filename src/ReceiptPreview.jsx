@@ -101,7 +101,8 @@ export default function ReceiptPreview({
       data.items.forEach((item) => {
         // Fit item name and price on one line, truncate if too long
         const itemName = (item.name || "Item").toString();
-        const qty = item.qty || 1;
+        // Use item.loads for main service, item.qty for add-ons, fallback to 1
+        const qty = item.loads || item.qty || 1;
         const price = Number(item.price || 0).toFixed(2);
         let line = `${itemName} x${qty}`;
         // Limit item name to 18 chars for 80mm paper
