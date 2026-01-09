@@ -159,15 +159,19 @@ export default function DailyReport() {
         return;
       }
 
+      // Parse dates and ensure full day range
       const start = new Date(startDate);
       start.setHours(0, 0, 0, 0);
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
 
+      // Get all paid orders in range (not just released)
       const orders = await getOrdersForExport(start, end);
 
       if (orders.length === 0) {
-        alert("No released orders found for the selected date range");
+        alert(
+          "No paid orders found for the selected date range.\n\nTip: Only orders with a payment date (paidAt) are included in the sales export."
+        );
         return;
       }
 
@@ -325,7 +329,7 @@ export default function DailyReport() {
       order.items
         ?.map((item) => `${item.name} x${item.loads || item.quantity || 1}`)
         .join(", ") || "N/A",
-      `₱${Number(order.total || 0).toLocaleString()}`,
+      `${Number(order.total || 0).toLocaleString()}`,
       order.paymentMethod || "N/A",
       order.gcashRefNumber || "-",
     ]);

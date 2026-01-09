@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import jsPDF from "jspdf";
 import {
   Dialog,
   DialogContent,
@@ -41,7 +42,11 @@ export default function ReceiptPreview({
   useEffect(() => {
     if (open && data) {
       setPaymentMethod(data.method === "Unpaid" ? "Cash" : data.method);
-      setAmountPaid(data.amountPaid ? String(data.amountPaid) : "");
+      if (data.method === "GCash") {
+        setAmountPaid(String(data.total));
+      } else {
+        setAmountPaid(data.amountPaid ? String(data.amountPaid) : "");
+      }
       setGcashNumber(data.gcashNumber || "");
       setGcashRefNumber(data.gcashRefNumber || "");
     }
@@ -53,6 +58,105 @@ export default function ReceiptPreview({
   const change = amountPaid
     ? Math.max(0, Number(amountPaid) - Number(data.total))
     : 0;
+
+  // PDF generation function
+  // Helper to fetch image as base64
+  const getBase64FromUrl = async (url) => {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const handleDownloadPDF = async () => {
+    const doc = new jsPDF({ unit: "mm", format: [80, 120] });
+    let y = 8;
+    // Add logo from public folder
+    try {
+      const logoBase64 = await getBase64FromUrl("/IansLogo.png");
+      doc.addImage(logoBase64, "PNG", 30, y, 20, 20); // Centered logo
+      y += 22;
+    } catch (e) {
+      y += 2;
+    }
+    doc.setFontSize(14);
+    doc.text("Ian's Laundry Hub", 40, y, { align: "center" });
+    y += 8;
+    doc.setFontSize(10);
+    doc.text(`Receipt #: ${data.receiptNumber || "-"}`, 10, y);
+    y += 6;
+    doc.text(`Customer: ${data.customer ? data.customer : "-"}`, 10, y);
+    y += 6;
+    doc.text(`Phone: ${data.phone ? data.phone : "-"}`, 10, y);
+    y += 6;
+    doc.text(`Date: ${data.date || new Date().toLocaleString()}`, 10, y);
+    y += 8;
+    doc.text("Items:", 10, y);
+    y += 5;
+    if (Array.isArray(data.items) && data.items.length > 0) {
+      data.items.forEach((item) => {
+        // Fit item name and price on one line, truncate if too long
+        const itemName = (item.name || "Item").toString();
+        const qty = item.qty || 1;
+        const price = Number(item.price || 0).toFixed(2);
+        let line = `${itemName} x${qty}`;
+        // Limit item name to 18 chars for 80mm paper
+        if (line.length > 18) line = line.slice(0, 18) + "…";
+        // Align price to the right, no peso sign
+        doc.text(line, 12, y, { maxWidth: 40 });
+        doc.text(`${price}`, 65, y, { align: "right" });
+        y += 5;
+      });
+    } else {
+      doc.text("-", 12, y);
+      y += 5;
+    }
+    y += 2;
+    doc.line(10, y, 70, y);
+    y += 5;
+    // Payment section
+    const total = `${Number(data.total).toFixed(2)}`;
+    const received = `${amountPaid || data.amountPaid || "0.00"}`;
+    const changeStr = `${change.toFixed(2)}`;
+    if (!isPaid) {
+      doc.setTextColor(255, 0, 0);
+      doc.text("UNPAID", 40, y, { align: "center" });
+      doc.setTextColor(0, 0, 0);
+      y += 8;
+      doc.text(`Total: ${total}`, 12, y);
+      y += 8;
+    } else {
+      doc.text(`Total: ${total}`, 12, y);
+      y += 6;
+      if ((paymentMethod || data.method) === "GCash") {
+        doc.text(`Payment: GCash`, 12, y);
+        y += 6;
+        doc.text(
+          `GCash Ref: ${gcashRefNumber || data.gcashRefNumber || "-"}`,
+          12,
+          y
+        );
+        y += 6;
+      } else {
+        doc.text(`Received Amount: ${received}`, 12, y);
+        y += 6;
+        doc.text(`Change: ${changeStr}`, 12, y);
+        y += 6;
+        doc.text(`Payment: ${paymentMethod || data.method || "-"}`, 12, y);
+        y += 6;
+      }
+    }
+    // Add extra space if near the bottom
+    if (y > 110) y = 115;
+    else y += 6;
+    doc.setFontSize(11);
+    doc.text("Thank you!", 40, y, { align: "center" });
+    doc.save(`receipt_${data.receiptNumber || "order"}.pdf`);
+  };
 
   const handlePayment = () => {
     if (!amountPaid || Number(amountPaid) < Number(data.total)) {
@@ -123,6 +227,15 @@ export default function ReceiptPreview({
       </Box>
 
       <DialogContent sx={{ p: 3 }}>
+        {/* Download/Share Receipt Button */}
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={handleDownloadPDF}
+          sx={{ mb: 2, fontWeight: 600 }}
+        >
+          Download/Share Receipt
+        </Button>
         {/* Receipt Number */}
         {data.receiptNumber && (
           <Box
@@ -283,35 +396,39 @@ export default function ReceiptPreview({
                 </Typography>
                 <Typography fontWeight={600}>{data.method}</Typography>
               </Box>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 1,
-                }}
-              >
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                  Amount Paid
-                </Typography>
-                <Typography fontWeight={600}>
-                  ₱{Number(data.amountPaid || data.total).toFixed(2)}
-                </Typography>
-              </Box>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                  Change
-                </Typography>
-                <Typography fontWeight={700} sx={{ color: "#4ade80" }}>
-                  ₱{Number(data.change || 0).toFixed(2)}
-                </Typography>
-              </Box>
+              {data.method !== "GCash" && (
+                <>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 1,
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      Amount Paid
+                    </Typography>
+                    <Typography fontWeight={600}>
+                      ₱{Number(data.amountPaid || data.total).toFixed(2)}
+                    </Typography>
+                  </Box>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      Change
+                    </Typography>
+                    <Typography fontWeight={700} sx={{ color: "#4ade80" }}>
+                      ₱{Number(data.change || 0).toFixed(2)}
+                    </Typography>
+                  </Box>
+                </>
+              )}
             </>
           )}
         </Box>
@@ -366,7 +483,12 @@ export default function ReceiptPreview({
               value={paymentMethod}
               exclusive
               onChange={(e, newMethod) => {
-                if (newMethod) setPaymentMethod(newMethod);
+                if (newMethod) {
+                  setPaymentMethod(newMethod);
+                  if (newMethod === "GCash") {
+                    setAmountPaid(String(data.total));
+                  }
+                }
               }}
               fullWidth
               sx={{ mb: 2 }}
@@ -406,8 +528,17 @@ export default function ReceiptPreview({
                   },
                 }}
               >
-                <AccountBalanceWalletIcon sx={{ mr: 1 }} />
-                GCash
+                <Box
+                  component="span"
+                  sx={{ display: "flex", alignItems: "center" }}
+                >
+                  <img
+                    src="/GcashLogo.png"
+                    alt="GCash Logo"
+                    style={{ width: 24, height: 24, marginRight: 8 }}
+                  />
+                  GCash
+                </Box>
               </ToggleButton>
             </ToggleButtonGroup>
 
@@ -491,52 +622,56 @@ export default function ReceiptPreview({
               </Stack>
             )}
 
-            {/* Amount Input */}
-            <TextField
-              fullWidth
-              label="Amount Received"
-              type="number"
-              value={amountPaid}
-              onChange={(e) => setAmountPaid(e.target.value)}
-              placeholder={`Min: ₱${Number(data.total).toFixed(2)}`}
-              sx={{ mb: 2 }}
-              InputProps={{
-                startAdornment: (
-                  <Typography sx={{ mr: 1, color: "text.secondary" }}>
-                    ₱
-                  </Typography>
-                ),
-              }}
-              error={
-                amountPaid !== "" && Number(amountPaid) < Number(data.total)
-              }
-              helperText={
-                amountPaid !== "" && Number(amountPaid) < Number(data.total)
-                  ? "Amount must be at least ₱" + Number(data.total).toFixed(2)
-                  : ""
-              }
-            />
-
-            {/* Change Display */}
-            {amountPaid && Number(amountPaid) >= Number(data.total) && (
-              <Box
-                sx={{
-                  p: 2,
-                  background:
-                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                  borderRadius: 2,
-                  color: "white",
-                  mb: 2,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <Typography fontWeight={500}>Change</Typography>
-                <Typography variant="h5" fontWeight={700}>
-                  ₱{change.toFixed(2)}
-                </Typography>
-              </Box>
+            {/* Amount Input and Change only for non-GCash */}
+            {paymentMethod !== "GCash" && (
+              <>
+                <TextField
+                  fullWidth
+                  label="Amount Received"
+                  type="number"
+                  value={amountPaid}
+                  onChange={(e) => setAmountPaid(e.target.value)}
+                  placeholder={`Min: ₱${Number(data.total).toFixed(2)}`}
+                  sx={{ mb: 2 }}
+                  InputProps={{
+                    startAdornment: (
+                      <Typography sx={{ mr: 1, color: "text.secondary" }}>
+                        ₱
+                      </Typography>
+                    ),
+                  }}
+                  error={
+                    amountPaid !== "" && Number(amountPaid) < Number(data.total)
+                  }
+                  helperText={
+                    amountPaid !== "" && Number(amountPaid) < Number(data.total)
+                      ? "Amount must be at least ₱" +
+                        Number(data.total).toFixed(2)
+                      : ""
+                  }
+                />
+                {/* Change Display */}
+                {amountPaid && Number(amountPaid) >= Number(data.total) && (
+                  <Box
+                    sx={{
+                      p: 2,
+                      background:
+                        "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                      borderRadius: 2,
+                      color: "white",
+                      mb: 2,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Typography fontWeight={500}>Change</Typography>
+                    <Typography variant="h5" fontWeight={700}>
+                      ₱{change.toFixed(2)}
+                    </Typography>
+                  </Box>
+                )}
+              </>
             )}
 
             {/* Submit Payment Button */}
@@ -546,8 +681,8 @@ export default function ReceiptPreview({
               size="large"
               onClick={handlePayment}
               disabled={
-                !amountPaid ||
-                Number(amountPaid) < Number(data.total) ||
+                (paymentMethod !== "GCash" &&
+                  (!amountPaid || Number(amountPaid) < Number(data.total))) ||
                 (paymentMethod === "GCash" && (!gcashNumber || !gcashRefNumber))
               }
               sx={{
