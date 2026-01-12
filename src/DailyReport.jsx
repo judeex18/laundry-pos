@@ -51,6 +51,48 @@ import {
 export default function DailyReport() {
   const [data, setData] = useState([]);
   const [stats, setStats] = useState({ total: 0, released: 0 });
+  // Deduction state
+  const [deductions, setDeductions] = useState([]);
+  const [deductionModalOpen, setDeductionModalOpen] = useState(false);
+  const [deductionType, setDeductionType] = useState("normal");
+  const [deductionAmount, setDeductionAmount] = useState("");
+  const [deductionDetails, setDeductionDetails] = useState("");
+
+  const handleOpenDeductionModal = () => {
+    setDeductionModalOpen(true);
+    setDeductionType("normal");
+    setDeductionAmount("");
+    setDeductionDetails("");
+  };
+  const handleCloseDeductionModal = () => {
+    setDeductionModalOpen(false);
+  };
+  const handleAddDeduction = () => {
+    if (
+      !deductionAmount ||
+      isNaN(Number(deductionAmount)) ||
+      Number(deductionAmount) <= 0
+    ) {
+      alert("Please enter a valid deduction amount.");
+      return;
+    }
+    const newDeductions = [
+      ...deductions,
+      {
+        type: deductionType,
+        amount: Number(deductionAmount),
+        details: deductionDetails,
+        date: new Date().toISOString(),
+      },
+    ];
+    setDeductions(newDeductions);
+    const today = new Date().toDateString();
+    localStorage.setItem(
+      `dailyDeductions_${today}`,
+      JSON.stringify(newDeductions)
+    );
+    setDeductionModalOpen(false);
+  };
 
   // Export dialog state
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
@@ -74,6 +116,14 @@ export default function DailyReport() {
     // Auto-refresh every 5 seconds
     const timer = setInterval(fetchReport, 5000);
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const today = new Date().toDateString();
+    const savedDeductions = localStorage.getItem(`dailyDeductions_${today}`);
+    if (savedDeductions) {
+      setDeductions(JSON.parse(savedDeductions));
+    }
   }, []);
 
   // Set default dates when dialog opens
@@ -136,6 +186,9 @@ export default function DailyReport() {
       )
     ) {
       await clearAllOrders();
+      setDeductions([]);
+      const today = new Date().toDateString();
+      localStorage.setItem(`dailyDeductions_${today}`, JSON.stringify([]));
       fetchReport();
     }
   };
@@ -190,10 +243,13 @@ export default function DailyReport() {
 
   const exportToExcel = (orders, start, end) => {
     // Calculate total revenue
-    const totalRevenue = orders.reduce(
+    const totalRevenueRaw = orders.reduce(
       (sum, order) => sum + Number(order.total || 0),
       0
     );
+    // Subtract deductions
+    const deductionTotal = deductions.reduce((sum, d) => sum + d.amount, 0);
+    const totalRevenue = totalRevenueRaw - deductionTotal;
 
     // Create worksheet with header
     const worksheet = XLSX.utils.json_to_sheet([]);
@@ -230,24 +286,30 @@ export default function DailyReport() {
     // Add data starting from row 5
     XLSX.utils.sheet_add_json(worksheet, excelData, { origin: "A5" });
 
-    // Add total row
+    // Add deduction rows if any
     const totalRowIndex = excelData.length + 6;
-    XLSX.utils.sheet_add_aoa(
-      worksheet,
-      [
-        [
-          "",
-          "",
-          "",
-          "",
-          `₱${totalRevenue.toLocaleString()}`,
-          "TOTAL REVENUE",
-          "",
-          "",
-        ],
-      ],
-      { origin: `A${totalRowIndex}` }
-    );
+    let rows = [];
+    if (deductions.length > 0) {
+      rows = deductions.map((d) => [
+        "",
+        "",
+        "",
+        "",
+        `-₱${d.amount.toLocaleString()}`,
+        d.details || "",
+        "Deduction",
+      ]);
+    }
+    rows.push([
+      "",
+      "",
+      "",
+      "",
+      `₱${totalRevenue.toLocaleString()}`,
+      "TOTAL REVENUE",
+      "",
+    ]);
+    XLSX.utils.sheet_add_aoa(worksheet, rows, { origin: `A${totalRowIndex}` });
 
     // Set column widths
     worksheet["!cols"] = [
@@ -335,10 +397,12 @@ export default function DailyReport() {
     ]);
 
     // Calculate total revenue
-    const totalRevenue = orders.reduce(
+    const totalRevenueRaw = orders.reduce(
       (sum, order) => sum + Number(order.total || 0),
       0
     );
+    const deductionTotal = deductions.reduce((sum, d) => sum + d.amount, 0);
+    const totalRevenue = totalRevenueRaw - deductionTotal;
 
     // Add table
     autoTable(doc, {
@@ -380,10 +444,27 @@ export default function DailyReport() {
     // Total summary
     const finalY = doc.lastAutoTable.finalY + 10;
     doc.setFontSize(12);
-    doc.setTextColor(55, 93, 165);
-    doc.setFont(undefined, "bold");
-    doc.text(`Total Revenue: ₱${totalRevenue.toLocaleString()}`, 14, finalY);
-    doc.text(`Total Orders: ${orders.length}`, 14, finalY + 7);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(undefined, "normal");
+    doc.text(`Total Orders: ${orders.length}`, 14, finalY);
+    let currentY = finalY + 7;
+    if (deductions.length > 0) {
+      doc.text("Deductions:", 14, currentY);
+      currentY += 7;
+      deductions.forEach((d) => {
+        doc.text(
+          `- ${d.amount.toLocaleString()} ${d.details || ""}`,
+          18,
+          currentY
+        );
+        currentY += 6;
+      });
+    }
+    doc.text(
+      `Total Revenue: ${totalRevenue.toLocaleString()}`,
+      14,
+      currentY + 7
+    );
 
     // Generate filename
     const dateRange =
@@ -484,7 +565,10 @@ export default function DailyReport() {
                   textShadow: "0 4px 12px rgba(0,0,0,0.3)",
                 }}
               >
-                ₱{total.toLocaleString()}
+                ₱
+                {(
+                  total - deductions.reduce((sum, d) => sum + d.amount, 0)
+                ).toLocaleString()}
               </Typography>
               <Typography
                 variant="body1"
@@ -496,6 +580,36 @@ export default function DailyReport() {
               >
                 {totalOrders} paid order(s) today
               </Typography>
+              <Button
+                variant="contained"
+                color="error"
+                sx={{ mt: 2, fontWeight: 700 }}
+                onClick={handleOpenDeductionModal}
+              >
+                Add Deduction
+              </Button>
+              {deductions.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ color: "#fee140", fontWeight: 700 }}
+                  >
+                    Deductions:
+                  </Typography>
+                  {deductions.map((d, i) => (
+                    <Typography
+                      key={i}
+                      variant="body2"
+                      sx={{
+                        color: "white",
+                      }}
+                    >
+                      - ₱{d.amount.toLocaleString()}{" "}
+                      {d.details && `: ${d.details}`}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
             </Box>
 
             <Box
@@ -521,6 +635,36 @@ export default function DailyReport() {
           </Stack>
         </Paper>
       </Fade>
+      {/* Deduction Modal */}
+      <Dialog open={deductionModalOpen} onClose={handleCloseDeductionModal}>
+        <DialogTitle>Add Deduction</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Amount"
+            type="number"
+            fullWidth
+            value={deductionAmount}
+            onChange={(e) => setDeductionAmount(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            label="Details"
+            fullWidth
+            value={deductionDetails}
+            onChange={(e) => setDeductionDetails(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDeductionModal}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleAddDeduction}
+          >
+            Add
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Order Stats - Enhanced Cards */}
       <Grid
