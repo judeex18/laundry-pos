@@ -79,13 +79,13 @@ export default function ReceiptPreview({
     // Add logo from public folder
     try {
       const logoBase64 = await getBase64FromUrl("/IansLogo.png");
-      doc.addImage(logoBase64, "PNG", 20, y, 12, 12); // Very small logo for 56mm
+      doc.addImage(logoBase64, "PNG", 2, y, 12, 12); // Logo moved to left edge
       y += 14;
     } catch (e) {
       y += 2;
     }
     doc.setFontSize(10);
-    doc.text("Ian's Laundry Hub", 28, y, { align: "center" });
+    doc.text("Ian's Laundry Hub", 15, y, { align: "left" }); // Moved left instead of center
     y += 4;
     doc.setFontSize(7);
     doc.text(`Receipt #: ${data.receiptNumber || "-"}`, 2, y);
@@ -127,7 +127,7 @@ export default function ReceiptPreview({
     const changeStr = `${change.toFixed(2)}`;
     if (!isPaid) {
       doc.setTextColor(255, 0, 0);
-      doc.text("UNPAID", 28, y, { align: "center" });
+      doc.text("UNPAID", 2, y, { align: "left" }); // Moved to left instead of center
       doc.setTextColor(0, 0, 0);
       y += 4;
       doc.text(`Total: ${total}`, 3, y);
@@ -157,7 +157,7 @@ export default function ReceiptPreview({
     if (y > 110) y = 115;
     else y += 3;
     doc.setFontSize(8);
-    doc.text("Thank you!", 28, y, { align: "center" });
+    doc.text("Thank you!", 2, y, { align: "left" }); // Moved to left instead of center
     doc.save(`receipt_${data.receiptNumber || "order"}.pdf`);
   };
 
