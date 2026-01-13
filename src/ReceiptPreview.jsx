@@ -74,8 +74,8 @@ export default function ReceiptPreview({
   };
 
   const handleDownloadPDF = async () => {
-    const doc = new jsPDF({ unit: "mm", format: [56, 120] });
-    let y = 4;
+    const doc = new jsPDF({ unit: "mm", format: [58, 120] }); // Changed to 58mm width
+    let y = 3;
     // Add logo from public folder
     try {
       const logoBase64 = await getBase64FromUrl("/IansLogo.png");
@@ -110,8 +110,8 @@ export default function ReceiptPreview({
         // Limit item name to 10 chars for very tight 56mm paper
         if (line.length > 10) line = line.slice(0, 10) + "…";
         // Align price to the right, no peso sign
-        doc.text(line, 3, y, { maxWidth: 30 });
-        doc.text(`${itemTotal}`, 53, y, { align: "right" });
+        doc.text(line, 3, y, { maxWidth: 32 });
+        doc.text(`${itemTotal}`, 55, y, { align: "right" }); // Adjusted for 58mm width
         y += 3;
       });
     } else {
@@ -119,7 +119,7 @@ export default function ReceiptPreview({
       y += 3;
     }
     y += 1;
-    doc.line(2, y, 54, y);
+    doc.line(2, y, 56, y); // Adjusted line length for 58mm width
     y += 3;
     // Payment section
     const total = `${Number(data.total).toFixed(2)}`;
@@ -162,123 +162,88 @@ export default function ReceiptPreview({
   };
 
   const handlePrint = () => {
-    const printWindow = window.open("", "_blank");
-    const receiptContent = `
+    const printWindow = window.open("", "_blank", "width=400,height=600");
+    const receiptHTML = `
       <html>
         <head>
           <title>Receipt - ${data.receiptNumber || "Order"}</title>
           <style>
             body {
-              font-family: Arial, sans-serif;
+              font-family: 'Courier New', monospace;
+              font-size: 10px;
+              line-height: 1.2;
               margin: 0;
-              padding: 10px;
-              max-width: 56mm;
+              padding: 5px;
+              width: 58mm;
               margin: 0 auto;
-              font-size: 12px;
             }
-            .header {
-              text-align: center;
-              margin-bottom: 15px;
-            }
-            .logo {
-              width: 40px;
-              height: 40px;
-              margin: 0 auto 8px;
-            }
-            .item {
-              display: flex;
-              justify-content: space-between;
-              margin: 4px 0;
-              font-size: 11px;
-            }
-            .total {
-              border-top: 1px solid #000;
-              padding-top: 8px;
-              margin-top: 8px;
-              font-weight: bold;
-              font-size: 12px;
-            }
-            .thank-you {
-              text-align: center;
-              margin-top: 15px;
-              font-size: 12px;
-            }
+            .center { text-align: center; }
+            .left { text-align: left; }
+            .right { text-align: right; }
+            .item { margin: 2px 0; }
+            .line { border-top: 1px solid black; margin: 3px 0; }
+            .logo { font-size: 12px; font-weight: bold; }
             @media print {
-              body { margin: 0; padding: 5px; }
+              body { margin: 0; width: 58mm; }
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <img src="/IansLogo.png" alt="Logo" class="logo" onerror="this.style.display='none'">
-            <h2 style="margin: 5px 0; font-size: 14px;">Ian's Laundry Hub</h2>
+          <div class="center">
+            <div class="logo">Ian's Laundry Hub</div>
           </div>
-          <div style="margin-bottom: 10px;">
-            <div style="font-size: 11px;"><strong>Receipt #:</strong> ${
-              data.receiptNumber || "-"
-            }</div>
-            <div style="font-size: 11px;"><strong>Customer:</strong> ${
-              data.customer || "-"
-            }</div>
-            <div style="font-size: 11px;"><strong>Phone:</strong> ${
-              data.phone || "-"
-            }</div>
-            <div style="font-size: 11px;"><strong>Date:</strong> ${
-              data.date || new Date().toLocaleString()
-            }</div>
+          <div class="left">
+            Receipt #: ${data.receiptNumber || "-"}<br>
+            Customer: ${data.customer || "-"}<br>
+            Phone: ${data.phone || "-"}<br>
+            Date: ${data.date || new Date().toLocaleString()}
           </div>
-          <div style="margin: 15px 0;">
-            <strong>Items:</strong>
+          <div class="line"></div>
+          <div>Items:</div>
+          ${
+            Array.isArray(data.items) && data.items.length > 0
+              ? data.items
+                  .map((item) => {
+                    const qty = item.loads || item.qty || 1;
+                    const itemTotal = (Number(item.price || 0) * qty).toFixed(
+                      2
+                    );
+                    const itemName = (item.name || "Item").toString();
+                    const truncatedName =
+                      itemName.length > 10
+                        ? itemName.slice(0, 10) + "…"
+                        : itemName;
+                    return `<div class="item">${truncatedName} x${qty}<span class="right">${itemTotal}</span></div>`;
+                  })
+                  .join("")
+              : "<div>-</div>"
+          }
+          <div class="line"></div>
+          <div>Total: <span class="right">${Number(data.total).toFixed(
+            2
+          )}</span></div>
+          ${
+            isPaid
+              ? `
+            <div>Payment: ${data.method || "-"}</div>
             ${
-              Array.isArray(data.items) && data.items.length > 0
-                ? data.items
-                    .map((item) => {
-                      const qty = item.loads || item.qty || 1;
-                      const itemTotal = (Number(item.price || 0) * qty).toFixed(
-                        2
-                      );
-                      const itemName = (item.name || "Item").toString();
-                      const truncatedName =
-                        itemName.length > 15
-                          ? itemName.slice(0, 15) + "…"
-                          : itemName;
-                      return `<div class="item"><span>${truncatedName} x${qty}</span><span>${itemTotal}</span></div>`;
-                    })
-                    .join("")
-                : "<div>-</div>"
-            }
-          </div>
-          <div class="total">
-            <div class="item"><span>Total:</span><span>${Number(
-              data.total
-            ).toFixed(2)}</span></div>
-            ${
-              isPaid
+              data.method !== "GCash"
                 ? `
-              <div><strong>Payment:</strong> ${data.method || "-"}</div>
-              ${
-                data.method !== "GCash"
-                  ? `
-                <div><strong>Received:</strong> ${
-                  data.amountPaid || "0.00"
-                }</div>
-                <div><strong>Change:</strong> ${data.change || "0.00"}</div>
-              `
-                  : `
-                <div><strong>GCash Ref:</strong> ${
-                  data.gcashRefNumber || "-"
-                }</div>
-              `
-              }
+              <div>Received: ${data.amountPaid || "0.00"}</div>
+              <div>Change: ${data.change || "0.00"}</div>
             `
-                : '<div style="color: red;"><strong>UNPAID</strong></div>'
+                : `
+              <div>GCash Ref: ${data.gcashRefNumber || "-"}</div>
+            `
             }
-          </div>
-          <div class="thank-you">Thank you!</div>
+          `
+              : '<div style="color: red; font-weight: bold;">UNPAID</div>'
+          }
+          <div class="center" style="margin-top: 8px;">Thank you!</div>
         </body>
       </html>
     `;
-    printWindow.document.write(receiptContent);
+    printWindow.document.write(receiptHTML);
     printWindow.document.close();
     printWindow.print();
   };
