@@ -79,24 +79,24 @@ export default function ReceiptPreview({
     // Add logo from public folder
     try {
       const logoBase64 = await getBase64FromUrl("/IansLogo.png");
-      doc.addImage(logoBase64, "PNG", 18, y, 16, 16); // Smaller logo for 56mm
-      y += 18;
+      doc.addImage(logoBase64, "PNG", 20, y, 12, 12); // Very small logo for 56mm
+      y += 14;
     } catch (e) {
       y += 2;
     }
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.text("Ian's Laundry Hub", 28, y, { align: "center" });
-    y += 5;
-    doc.setFontSize(8);
-    doc.text(`Receipt #: ${data.receiptNumber || "-"}`, 3, y);
     y += 4;
-    doc.text(`Customer: ${data.customer ? data.customer : "-"}`, 3, y);
+    doc.setFontSize(7);
+    doc.text(`Receipt #: ${data.receiptNumber || "-"}`, 2, y);
+    y += 3;
+    doc.text(`Customer: ${data.customer ? data.customer : "-"}`, 2, y);
+    y += 3;
+    doc.text(`Phone: ${data.phone ? data.phone : "-"}`, 2, y);
+    y += 3;
+    doc.text(`Date: ${data.date || new Date().toLocaleString()}`, 2, y);
     y += 4;
-    doc.text(`Phone: ${data.phone ? data.phone : "-"}`, 3, y);
-    y += 4;
-    doc.text(`Date: ${data.date || new Date().toLocaleString()}`, 3, y);
-    y += 5;
-    doc.text("Items:", 3, y);
+    doc.text("Items:", 2, y);
     y += 3;
     if (Array.isArray(data.items) && data.items.length > 0) {
       data.items.forEach((item) => {
@@ -107,19 +107,19 @@ export default function ReceiptPreview({
         // Show total for this item (price * qty)
         const itemTotal = (Number(item.price || 0) * qty).toFixed(2);
         let line = `${itemName} x${qty}`;
-        // Limit item name to 12 chars for tighter 56mm paper
-        if (line.length > 12) line = line.slice(0, 12) + "…";
+        // Limit item name to 10 chars for very tight 56mm paper
+        if (line.length > 10) line = line.slice(0, 10) + "…";
         // Align price to the right, no peso sign
-        doc.text(line, 4, y, { maxWidth: 32 });
-        doc.text(`${itemTotal}`, 52, y, { align: "right" });
+        doc.text(line, 3, y, { maxWidth: 30 });
+        doc.text(`${itemTotal}`, 53, y, { align: "right" });
         y += 3;
       });
     } else {
-      doc.text("-", 4, y);
+      doc.text("-", 3, y);
       y += 3;
     }
-    y += 2;
-    doc.line(3, y, 53, y);
+    y += 1;
+    doc.line(2, y, 54, y);
     y += 3;
     // Payment section
     const total = `${Number(data.total).toFixed(2)}`;
@@ -129,34 +129,34 @@ export default function ReceiptPreview({
       doc.setTextColor(255, 0, 0);
       doc.text("UNPAID", 28, y, { align: "center" });
       doc.setTextColor(0, 0, 0);
-      y += 5;
-      doc.text(`Total: ${total}`, 4, y);
-      y += 5;
-    } else {
-      doc.text(`Total: ${total}`, 4, y);
       y += 4;
+      doc.text(`Total: ${total}`, 3, y);
+      y += 4;
+    } else {
+      doc.text(`Total: ${total}`, 3, y);
+      y += 3;
       if ((paymentMethod || data.method) === "GCash") {
-        doc.text(`Payment: GCash`, 4, y);
-        y += 4;
+        doc.text(`Payment: GCash`, 3, y);
+        y += 3;
         doc.text(
           `GCash Ref: ${gcashRefNumber || data.gcashRefNumber || "-"}`,
-          4,
+          3,
           y
         );
-        y += 4;
+        y += 3;
       } else {
-        doc.text(`Received Amount: ${received}`, 4, y);
-        y += 4;
-        doc.text(`Change: ${changeStr}`, 4, y);
-        y += 4;
-        doc.text(`Payment: ${paymentMethod || data.method || "-"}`, 4, y);
-        y += 4;
+        doc.text(`Received Amount: ${received}`, 3, y);
+        y += 3;
+        doc.text(`Change: ${changeStr}`, 3, y);
+        y += 3;
+        doc.text(`Payment: ${paymentMethod || data.method || "-"}`, 3, y);
+        y += 3;
       }
     }
     // Add extra space if near the bottom
     if (y > 110) y = 115;
-    else y += 4;
-    doc.setFontSize(9);
+    else y += 3;
+    doc.setFontSize(8);
     doc.text("Thank you!", 28, y, { align: "center" });
     doc.save(`receipt_${data.receiptNumber || "order"}.pdf`);
   };
