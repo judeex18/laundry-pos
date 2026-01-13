@@ -75,29 +75,29 @@ export default function ReceiptPreview({
 
   const handleDownloadPDF = async () => {
     const doc = new jsPDF({ unit: "mm", format: [56, 120] });
-    let y = 6;
+    let y = 4;
     // Add logo from public folder
     try {
       const logoBase64 = await getBase64FromUrl("/IansLogo.png");
-      doc.addImage(logoBase64, "PNG", 18, y, 20, 20); // Centered logo for 56mm
-      y += 22;
+      doc.addImage(logoBase64, "PNG", 18, y, 16, 16); // Smaller logo for 56mm
+      y += 18;
     } catch (e) {
       y += 2;
     }
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.text("Ian's Laundry Hub", 28, y, { align: "center" });
-    y += 6;
-    doc.setFontSize(9);
-    doc.text(`Receipt #: ${data.receiptNumber || "-"}`, 5, y);
     y += 5;
-    doc.text(`Customer: ${data.customer ? data.customer : "-"}`, 5, y);
-    y += 5;
-    doc.text(`Phone: ${data.phone ? data.phone : "-"}`, 5, y);
-    y += 5;
-    doc.text(`Date: ${data.date || new Date().toLocaleString()}`, 5, y);
-    y += 6;
-    doc.text("Items:", 5, y);
+    doc.setFontSize(8);
+    doc.text(`Receipt #: ${data.receiptNumber || "-"}`, 3, y);
     y += 4;
+    doc.text(`Customer: ${data.customer ? data.customer : "-"}`, 3, y);
+    y += 4;
+    doc.text(`Phone: ${data.phone ? data.phone : "-"}`, 3, y);
+    y += 4;
+    doc.text(`Date: ${data.date || new Date().toLocaleString()}`, 3, y);
+    y += 5;
+    doc.text("Items:", 3, y);
+    y += 3;
     if (Array.isArray(data.items) && data.items.length > 0) {
       data.items.forEach((item) => {
         // Fit item name and price on one line, truncate if too long
@@ -107,20 +107,20 @@ export default function ReceiptPreview({
         // Show total for this item (price * qty)
         const itemTotal = (Number(item.price || 0) * qty).toFixed(2);
         let line = `${itemName} x${qty}`;
-        // Limit item name to 15 chars for 56mm paper
-        if (line.length > 15) line = line.slice(0, 15) + "…";
+        // Limit item name to 12 chars for tighter 56mm paper
+        if (line.length > 12) line = line.slice(0, 12) + "…";
         // Align price to the right, no peso sign
-        doc.text(line, 6, y, { maxWidth: 35 });
-        doc.text(`${itemTotal}`, 51, y, { align: "right" });
-        y += 4;
+        doc.text(line, 4, y, { maxWidth: 32 });
+        doc.text(`${itemTotal}`, 52, y, { align: "right" });
+        y += 3;
       });
     } else {
-      doc.text("-", 6, y);
-      y += 4;
+      doc.text("-", 4, y);
+      y += 3;
     }
     y += 2;
-    doc.line(5, y, 51, y);
-    y += 4;
+    doc.line(3, y, 53, y);
+    y += 3;
     // Payment section
     const total = `${Number(data.total).toFixed(2)}`;
     const received = `${amountPaid || data.amountPaid || "0.00"}`;
@@ -129,34 +129,34 @@ export default function ReceiptPreview({
       doc.setTextColor(255, 0, 0);
       doc.text("UNPAID", 28, y, { align: "center" });
       doc.setTextColor(0, 0, 0);
-      y += 6;
-      doc.text(`Total: ${total}`, 6, y);
-      y += 6;
-    } else {
-      doc.text(`Total: ${total}`, 6, y);
       y += 5;
+      doc.text(`Total: ${total}`, 4, y);
+      y += 5;
+    } else {
+      doc.text(`Total: ${total}`, 4, y);
+      y += 4;
       if ((paymentMethod || data.method) === "GCash") {
-        doc.text(`Payment: GCash`, 6, y);
-        y += 5;
+        doc.text(`Payment: GCash`, 4, y);
+        y += 4;
         doc.text(
           `GCash Ref: ${gcashRefNumber || data.gcashRefNumber || "-"}`,
-          6,
+          4,
           y
         );
-        y += 5;
+        y += 4;
       } else {
-        doc.text(`Received Amount: ${received}`, 6, y);
-        y += 5;
-        doc.text(`Change: ${changeStr}`, 6, y);
-        y += 5;
-        doc.text(`Payment: ${paymentMethod || data.method || "-"}`, 6, y);
-        y += 5;
+        doc.text(`Received Amount: ${received}`, 4, y);
+        y += 4;
+        doc.text(`Change: ${changeStr}`, 4, y);
+        y += 4;
+        doc.text(`Payment: ${paymentMethod || data.method || "-"}`, 4, y);
+        y += 4;
       }
     }
     // Add extra space if near the bottom
     if (y > 110) y = 115;
-    else y += 5;
-    doc.setFontSize(10);
+    else y += 4;
+    doc.setFontSize(9);
     doc.text("Thank you!", 28, y, { align: "center" });
     doc.save(`receipt_${data.receiptNumber || "order"}.pdf`);
   };
