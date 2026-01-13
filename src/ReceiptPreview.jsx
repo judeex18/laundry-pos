@@ -25,6 +25,7 @@ import PaymentsIcon from "@mui/icons-material/Payments";
 import PaidIcon from "@mui/icons-material/Paid";
 import CloseIcon from "@mui/icons-material/Close";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
+import PrintIcon from "@mui/icons-material/Print";
 
 export default function ReceiptPreview({
   open,
@@ -160,6 +161,98 @@ export default function ReceiptPreview({
     doc.save(`receipt_${data.receiptNumber || "order"}.pdf`);
   };
 
+  const handlePrint = () => {
+    const printWindow = window.open("", "_blank");
+    const receiptContent = `
+      <html>
+        <head>
+          <title>Receipt - ${data.receiptNumber || "Order"}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 10px;
+              max-width: 56mm;
+              margin: 0 auto;
+              font-size: 12px;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 15px;
+            }
+            .logo {
+              width: 40px;
+              height: 40px;
+              margin: 0 auto 8px;
+            }
+            .item {
+              display: flex;
+              justify-content: space-between;
+              margin: 4px 0;
+              font-size: 11px;
+            }
+            .total {
+              border-top: 1px solid #000;
+              padding-top: 8px;
+              margin-top: 8px;
+              font-weight: bold;
+              font-size: 12px;
+            }
+            .thank-you {
+              text-align: center;
+              margin-top: 15px;
+              font-size: 12px;
+            }
+            @media print {
+              body { margin: 0; padding: 5px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <img src="/IansLogo.png" alt="Logo" class="logo" onerror="this.style.display='none'">
+            <h2 style="margin: 5px 0; font-size: 14px;">Ian's Laundry Hub</h2>
+          </div>
+          <div style="margin-bottom: 10px;">
+            <div style="font-size: 11px;"><strong>Receipt #:</strong> ${data.receiptNumber || "-"}</div>
+            <div style="font-size: 11px;"><strong>Customer:</strong> ${data.customer || "-"}</div>
+            <div style="font-size: 11px;"><strong>Phone:</strong> ${data.phone || "-"}</div>
+            <div style="font-size: 11px;"><strong>Date:</strong> ${data.date || new Date().toLocaleString()}</div>
+          </div>
+          <div style="margin: 15px 0;">
+            <strong>Items:</strong>
+            ${Array.isArray(data.items) && data.items.length > 0
+              ? data.items.map(item => {
+                  const qty = item.loads || item.qty || 1;
+                  const itemTotal = (Number(item.price || 0) * qty).toFixed(2);
+                  const itemName = (item.name || "Item").toString();
+                  const truncatedName = itemName.length > 15 ? itemName.slice(0, 15) + "…" : itemName;
+                  return `<div class="item"><span>${truncatedName} x${qty}</span><span>${itemTotal}</span></div>`;
+                }).join("")
+              : "<div>-</div>"
+            }
+          </div>
+          <div class="total">
+            <div class="item"><span>Total:</span><span>${Number(data.total).toFixed(2)}</span></div>
+            ${isPaid ? `
+              <div><strong>Payment:</strong> ${data.method || "-"}</div>
+              ${data.method !== "GCash" ? `
+                <div><strong>Received:</strong> ${data.amountPaid || "0.00"}</div>
+                <div><strong>Change:</strong> ${data.change || "0.00"}</div>
+              ` : `
+                <div><strong>GCash Ref:</strong> ${data.gcashRefNumber || "-"}</div>
+              `}
+            ` : '<div style="color: red;"><strong>UNPAID</strong></div>'}
+          </div>
+          <div class="thank-you">Thank you!</div>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(receiptContent);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   const handlePayment = () => {
     if (!amountPaid || Number(amountPaid) < Number(data.total)) {
       return;
@@ -229,15 +322,26 @@ export default function ReceiptPreview({
       </Box>
 
       <DialogContent sx={{ p: 3 }}>
-        {/* Download/Share Receipt Button */}
-        <Button
-          variant="outlined"
-          color="primary"
-          onClick={handleDownloadPDF}
-          sx={{ mb: 2, fontWeight: 600 }}
-        >
-          Download/Share Receipt
-        </Button>
+        {/* Download and Print Receipt Buttons */}
+        <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={handleDownloadPDF}
+            sx={{ flex: 1, fontWeight: 600 }}
+          >
+            Download Receipt
+          </Button>
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={handlePrint}
+            startIcon={<PrintIcon />}
+            sx={{ flex: 1, fontWeight: 600 }}
+          >
+            Print Receipt
+          </Button>
+        </Box>
         {/* Receipt Number */}
         {data.receiptNumber && (
           <Box
