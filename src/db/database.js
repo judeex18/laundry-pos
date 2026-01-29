@@ -8,13 +8,15 @@ import Dexie from "dexie";
 const db = new Dexie("LaundryPOS");
 
 // Define schema - increment version to force update
-db.version(5).stores({
+db.version(7).stores({
   services: "++id, name, price, active",
   orders:
     "++id, receiptNumber, status, customerName, phone, total, paymentMethod, createdAt",
   inventory: "++id, name, type, quantity, unit, createdAt, updatedAt",
   inventoryLogs:
     "++id, inventoryId, action, quantity, note, customerName, createdAt",
+  timeRecords:
+    "++id, [staffName+date], staffName, date, timeIn, timeOut, totalHours, status, notes, timeInPhoto, timeOutPhoto, createdAt, updatedAt",
 });
 
 // Default inventory items (empty - user will add manually)
@@ -655,5 +657,195 @@ export const syncAllOrdersToSupabase = async () => {
   } catch (error) {
     console.error("❌ Bulk sync failed:", error);
     return { synced: 0, failed: 0, error };
+  }
+};
+
+// =====================
+// TIME TRACKING FUNCTIONS
+// =====================
+
+// Get all time records
+export const getTimeRecords = async () => {
+  try {
+    return await db.timeRecords.toArray();
+  } catch (error) {
+    console.error("Failed to get time records:", error);
+    return [];
+  }
+};
+
+// Get time records for a specific date
+export const getTimeRecordsByDate = async (date) => {
+  try {
+    return await db.timeRecords.where("date").equals(date).toArray();
+  } catch (error) {
+    console.error("Failed to get time records by date:", error);
+    return [];
+  }
+};
+
+// Get time records for a specific staff member
+export const getTimeRecordsByStaff = async (staffName) => {
+  try {
+    return await db.timeRecords.where("staffName").equals(staffName).toArray();
+  } catch (error) {
+    console.error("Failed to get time records by staff:", error);
+    return [];
+  }
+};
+
+// Get active time record for a staff member (no time_out yet)
+export const getActiveTimeRecord = async (staffName) => {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const records = await db.timeRecords
+      .where("[staffName+date]")
+      .equals([staffName, today])
+      .and((record) => record.status === "active")
+      .toArray();
+    return records[0] || null;
+  } catch (error) {
+    console.error("Failed to get active time record:", error);
+    return null;
+  }
+};
+
+// Clock in staff
+export const clockInStaff = async (
+  staffName,
+  notes = "",
+  timeInPhoto = null
+) => {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const now = new Date().toISOString();
+
+    // Check if already clocked in
+    const existing = await getActiveTimeRecord(staffName);
+    if (existing) {
+      throw new Error(`${staffName} is already clocked in`);
+    }
+
+    const record = {
+      staffName,
+      date: today,
+      timeIn: now,
+      timeOut: null,
+      totalHours: 0,
+      status: "active",
+      notes,
+      timeInPhoto,
+      timeOutPhoto: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const id = await db.timeRecords.add(record);
+    return { ...record, id };
+  } catch (error) {
+    console.error("Failed to clock in staff:", error);
+    throw error;
+  }
+};
+
+// Clock out staff
+export const clockOutStaff = async (
+  staffName,
+  notes = "",
+  timeOutPhoto = null
+) => {
+  try {
+    const now = new Date().toISOString();
+    const activeRecord = await getActiveTimeRecord(staffName);
+
+    if (!activeRecord) {
+      throw new Error(`${staffName} is not clocked in`);
+    }
+
+    const timeIn = new Date(activeRecord.timeIn);
+    const timeOut = new Date(now);
+    const totalHours = (timeOut - timeIn) / (1000 * 60 * 60); // Convert to hours
+
+    const updatedRecord = {
+      ...activeRecord,
+      timeOut: now,
+      totalHours: Math.round(totalHours * 100) / 100, // Round to 2 decimal places
+      status: "completed",
+      notes: notes || activeRecord.notes,
+      timeOutPhoto,
+      updatedAt: now,
+    };
+
+    await db.timeRecords.update(activeRecord.id, updatedRecord);
+    return updatedRecord;
+  } catch (error) {
+    console.error("Failed to clock out staff:", error);
+    throw error;
+  }
+};
+
+// Update time record notes
+export const updateTimeRecordNotes = async (id, notes) => {
+  try {
+    await db.timeRecords.update(id, {
+      notes,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Failed to update time record notes:", error);
+    throw error;
+  }
+};
+
+// Delete time record
+export const deleteTimeRecord = async (id) => {
+  try {
+    await db.timeRecords.delete(id);
+  } catch (error) {
+    console.error("Failed to delete time record:", error);
+    throw error;
+  }
+};
+
+// Get time records for date range
+export const getTimeRecordsByDateRange = async (startDate, endDate) => {
+  try {
+    return await db.timeRecords
+      .where("date")
+      .between(startDate, endDate, true, true)
+      .toArray();
+  } catch (error) {
+    console.error("Failed to get time records by date range:", error);
+    return [];
+  }
+};
+
+// Get staff attendance summary
+export const getStaffAttendanceSummary = async (startDate, endDate) => {
+  try {
+    const records = await getTimeRecordsByDateRange(startDate, endDate);
+    const summary = {};
+
+    records.forEach((record) => {
+      if (!summary[record.staffName]) {
+        summary[record.staffName] = {
+          staffName: record.staffName,
+          totalDays: 0,
+          totalHours: 0,
+          completedRecords: 0,
+        };
+      }
+
+      summary[record.staffName].totalDays += 1;
+      summary[record.staffName].totalHours += record.totalHours || 0;
+      if (record.status === "completed") {
+        summary[record.staffName].completedRecords += 1;
+      }
+    });
+
+    return Object.values(summary);
+  } catch (error) {
+    console.error("Failed to get staff attendance summary:", error);
+    return [];
   }
 };

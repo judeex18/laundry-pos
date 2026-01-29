@@ -14,6 +14,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import InventoryIcon from "@mui/icons-material/Inventory";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import LogoutIcon from "@mui/icons-material/Logout";
 import POS from "./POS";
 import OrderBoard from "./OrderBoard";
@@ -21,6 +22,7 @@ import DailyReport from "./DailyReport";
 import Inventory from "./Inventory";
 import LandingPage from "./LandingPage";
 import TrackOrder from "./TrackOrder";
+import TimeTracking from "./TimeTracking";
 
 // Custom theme with Ian's Laundry Hub colors (Blue & Gold theme)
 const theme = createTheme({
@@ -324,6 +326,16 @@ function App() {
                   }
                   value="inventory"
                 />
+                <Tab
+                  icon={<AccessTimeIcon />}
+                  iconPosition="start"
+                  label={
+                    <Box sx={{ display: { xs: "none", sm: "block" } }}>
+                      Time Tracking
+                    </Box>
+                  }
+                  value="timetracking"
+                />
               </Tabs>
 
               {/* Logout Button */}
@@ -365,6 +377,7 @@ function App() {
             {page === "orders" && <OrderBoard />}
             {page === "report" && <DailyReport />}
             {page === "inventory" && <Inventory />}
+            {page === "timetracking" && <TimeTracking />}
           </Box>
         </Container>
       </Box>
