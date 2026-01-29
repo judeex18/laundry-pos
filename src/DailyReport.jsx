@@ -446,7 +446,7 @@ export default function DailyReport() {
     doc.setFontSize(12);
     doc.setTextColor(0, 0, 0);
     doc.setFont(undefined, "normal");
-    doc.text(`Total Orders: ${orders.length}`, 14, finalY);
+    doc.text(`Total Payments Received Today: ${orders.length}`, 14, finalY);
     let currentY = finalY + 7;
     if (deductions.length > 0) {
       doc.text("Deductions:", 14, currentY);
