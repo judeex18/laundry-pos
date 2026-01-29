@@ -112,6 +112,41 @@ export const updateOrderStatusInSupabase = async (receiptNumber, status) => {
   }
 };
 
+// Update order payment in Supabase
+export const updateOrderPaymentInSupabase = async (
+  receiptNumber,
+  paymentData
+) => {
+  try {
+    const updateData = {
+      payment_method: paymentData.method,
+    };
+
+    // Add GCash details if applicable
+    if (paymentData.method === "GCash") {
+      // Note: Supabase schema doesn't have these fields yet
+      // updateData.gcash_number = paymentData.gcashNumber || null;
+      // updateData.gcash_ref_number = paymentData.gcashRefNumber || null;
+    }
+
+    const { error } = await supabase
+      .from("orders")
+      .update(updateData)
+      .eq("receipt_number", receiptNumber);
+
+    if (error) {
+      console.error("❌ Payment update error:", error);
+      return false;
+    }
+
+    console.log("✅ Payment updated in Supabase");
+    return true;
+  } catch (error) {
+    console.error("❌ Payment update failed:", error);
+    return false;
+  }
+};
+
 // Get all orders from Supabase (for admin)
 export const getOrdersFromSupabase = async () => {
   try {

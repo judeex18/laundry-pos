@@ -30,7 +30,13 @@ import {
   getOrders,
   updateOrderStatus,
   updateOrderPayment,
+  syncOrdersFromSupabase,
 } from "./db/database";
+import {
+  getOrdersFromSupabase,
+  updateOrderStatusInSupabase,
+  updateOrderPaymentInSupabase,
+} from "./db/supabase";
 import ReceiptPreview from "./ReceiptPreview";
 
 // Order workflow
@@ -48,14 +54,21 @@ export default function OrderBoard() {
   });
 
   // =====================
-  // LOAD ORDERS FROM INDEXEDDB
+  // LOAD ORDERS FROM SUPABASE
   // =====================
   const fetchOrders = async () => {
     try {
-      const localOrders = await getOrders();
-      setOrders(localOrders);
+      const supabaseOrders = await getOrdersFromSupabase();
+      setOrders(supabaseOrders);
     } catch (error) {
-      console.error("Failed to load orders:", error);
+      console.error("Failed to load orders from Supabase:", error);
+      // Fallback to local orders
+      try {
+        const localOrders = await getOrders();
+        setOrders(localOrders);
+      } catch (localError) {
+        console.error("Failed to load local orders:", localError);
+      }
     }
   };
 
@@ -81,8 +94,8 @@ export default function OrderBoard() {
     if (order.status === status) return;
 
     try {
-      await updateOrderStatus(order.id, status);
-      fetchOrders();
+      await updateOrderStatusInSupabase(order.receiptNumber, status);
+      fetchOrders(); // Refresh orders
     } catch (error) {
       console.error("Failed to update status:", error);
     }
@@ -228,9 +241,9 @@ export default function OrderBoard() {
   // =====================
   // HANDLE PAYMENT UPDATE
   // =====================
-  const handlePaymentUpdate = async (orderId, paymentData) => {
+  const handlePaymentUpdate = async (receiptNumber, paymentData) => {
     try {
-      await updateOrderPayment(orderId, paymentData);
+      await updateOrderPaymentInSupabase(receiptNumber, paymentData);
       setSnackbar({
         open: true,
         message: `Payment recorded! Method: ${paymentData.method}`,
@@ -264,7 +277,9 @@ export default function OrderBoard() {
 
   // Filter released orders by selected date
   const getFilteredReleasedOrders = () => {
-    const releasedOrders = orders.filter((o) => o.status === "Released");
+    const releasedOrders = orders.filter(
+      (o) => o.status?.toLowerCase() === "released"
+    );
 
     if (!releasedDateFilter) {
       return releasedOrders.slice(0, 6); // Show latest 6 if no date selected
@@ -830,7 +845,8 @@ export default function OrderBoard() {
       )}
 
       {/* Released Orders Section */}
-      {orders.filter((o) => o.status === "Released").length > 0 && (
+      {orders.filter((o) => o.status?.toLowerCase() === "released").length >
+        0 && (
         <Fade in timeout={900}>
           <Paper
             elevation={0}
@@ -883,7 +899,9 @@ export default function OrderBoard() {
                           year: "numeric",
                         })}`
                       : `${
-                          orders.filter((o) => o.status === "Released").length
+                          orders.filter(
+                            (o) => o.status?.toLowerCase() === "released"
+                          ).length
                         } total completed orders`}
                   </Typography>
                 </Box>
@@ -940,11 +958,7 @@ export default function OrderBoard() {
                 </Typography>
               </Box>
             ) : (
-              <Grid
-                container
-                spacing={{ xs: 1.5, sm: 2 }}
-                justifyContent="center"
-              >
+              <Grid container spacing={{ xs: 1.5, sm: 2 }}>
                 {getFilteredReleasedOrders().map((order, index) => (
                   <Grid item xs={12} sm={6} md={4} lg={3} xl={3} key={order.id}>
                     <Zoom in timeout={300 + index * 50}>

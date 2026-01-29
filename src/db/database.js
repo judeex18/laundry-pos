@@ -122,7 +122,7 @@ const generateReceiptNumber = async () => {
   return `ORD-${datePrefix}-${orderNum}`;
 };
 
-import { syncOrderToSupabase } from "./supabase";
+import { syncOrderToSupabase, getOrdersFromSupabase } from "./supabase";
 
 export const createOrder = async (orderData) => {
   const receiptNumber = await generateReceiptNumber();
@@ -146,6 +146,61 @@ export const createOrder = async (orderData) => {
   });
 
   return { id, receiptNumber };
+};
+
+// Sync orders from Supabase to local IndexedDB
+export const syncOrdersFromSupabase = async () => {
+  try {
+    const supabaseOrders = await getOrdersFromSupabase();
+
+    if (supabaseOrders.length === 0) {
+      console.log("ℹ️ No orders found in Supabase");
+      return;
+    }
+
+    // Get existing local orders to avoid duplicates
+    const localOrders = await db.orders.toArray();
+    const localReceiptNumbers = new Set(
+      localOrders.map((o) => o.receiptNumber)
+    );
+
+    // Filter out orders that already exist locally
+    const newOrders = supabaseOrders.filter(
+      (order) => !localReceiptNumbers.has(order.receiptNumber)
+    );
+
+    if (newOrders.length === 0) {
+      console.log("ℹ️ All Supabase orders already exist locally");
+      return;
+    }
+
+    // Transform Supabase orders to match local schema
+    const ordersToAdd = newOrders.map((order) => ({
+      receiptNumber: order.receiptNumber,
+      customerName: order.customerName,
+      phone: order.phone,
+      items: order.items,
+      total: order.total,
+      paymentMethod: order.paymentMethod,
+      status: order.status,
+      createdAt: order.createdAt,
+      // Add any missing fields with defaults
+      gcashNumber: order.gcashNumber || null,
+      gcashRefNumber: order.gcashRefNumber || null,
+      amountPaid: order.amountPaid || null,
+      change: order.change || null,
+    }));
+
+    await db.orders.bulkAdd(ordersToAdd);
+    console.log(
+      `✅ Synced ${ordersToAdd.length} orders from Supabase to local DB`
+    );
+
+    return ordersToAdd.length;
+  } catch (error) {
+    console.error("❌ Failed to sync orders from Supabase:", error);
+    return 0;
+  }
 };
 
 export const getOrders = async () => {

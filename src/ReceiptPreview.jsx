@@ -264,8 +264,8 @@ export default function ReceiptPreview({
       paymentData.gcashRefNumber = gcashRefNumber;
     }
 
-    if (onPaymentUpdate && data.id) {
-      onPaymentUpdate(data.id, paymentData);
+    if (onPaymentUpdate && data.receiptNumber) {
+      onPaymentUpdate(data.receiptNumber, paymentData);
     }
   };
 
