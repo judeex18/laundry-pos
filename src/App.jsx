@@ -209,8 +209,9 @@ function App() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                flexWrap: "wrap",
+                flexWrap: { xs: "wrap", md: "nowrap" },
                 gap: 2,
+                minHeight: { xs: "auto", md: 64 },
               }}
             >
               {/* Logo */}
@@ -219,6 +220,8 @@ function App() {
                   display: "flex",
                   alignItems: "center",
                   gap: { xs: 1, sm: 1.5 },
+                  flexShrink: 0,
+                  minWidth: { xs: "auto", md: 200 },
                 }}
               >
                 <Box
@@ -264,14 +267,16 @@ function App() {
                 scrollButtons="auto"
                 allowScrollButtonsMobile
                 sx={{
+                  flex: { xs: 1, md: "none" },
+                  minWidth: 0,
                   "& .MuiTab-root": {
                     color: "rgba(255,255,255,0.7)",
                     fontWeight: 600,
-                    fontSize: { xs: "0.75rem", sm: "0.9rem" },
+                    fontSize: { xs: "0.75rem", sm: "0.85rem", md: "0.9rem" },
                     textTransform: "none",
-                    minHeight: { xs: 40, sm: 48 },
-                    minWidth: { xs: "auto", sm: 120 },
-                    px: { xs: 1.5, sm: 2 },
+                    minHeight: { xs: 40, sm: 44, md: 48 },
+                    minWidth: { xs: "auto", sm: 100, md: 120 },
+                    px: { xs: 1, sm: 1.5, md: 2 },
                     "&.Mui-selected": {
                       color: "white",
                     },
@@ -345,11 +350,12 @@ function App() {
                 onClick={handleLogout}
                 sx={{
                   ml: { xs: 1, sm: 2 },
+                  flexShrink: 0,
                   color: "white",
                   borderColor: "rgba(255,255,255,0.5)",
-                  fontSize: { xs: "0.7rem", sm: "0.85rem" },
-                  px: { xs: 1, sm: 2 },
-                  minWidth: { xs: "auto", sm: 100 },
+                  fontSize: { xs: "0.7rem", sm: "0.8rem", md: "0.85rem" },
+                  px: { xs: 1, sm: 1.5, md: 2 },
+                  minWidth: { xs: "auto", sm: 90, md: 100 },
                   "&:hover": {
                     borderColor: "white",
                     bgcolor: "rgba(255,255,255,0.1)",
