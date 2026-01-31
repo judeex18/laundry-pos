@@ -30,7 +30,7 @@ import WaterDropIcon from "@mui/icons-material/WaterDrop";
 import WbSunnyIcon from "@mui/icons-material/WbSunny";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import CelebrationIcon from "@mui/icons-material/Celebration";
-import { trackOrderFromSupabase } from "./db/supabase";
+import { trackOrder } from "./db/database";
 
 // Status configuration for tracking
 const statusSteps = ["Received", "Washing", "Drying", "Ready", "Released"];
@@ -92,7 +92,7 @@ function TrackOrder() {
     setTrackingResult(null);
 
     try {
-      const result = await trackOrderFromSupabase(receiptNumber.trim());
+      const result = await trackOrder(receiptNumber.trim());
 
       if (result) {
         setTrackingResult(result);
@@ -101,7 +101,7 @@ function TrackOrder() {
       }
     } catch (error) {
       setTrackingError(
-        "Unable to connect to server. Please check your connection."
+        "Unable to connect to server. Please check your connection.",
       );
     } finally {
       setIsTracking(false);

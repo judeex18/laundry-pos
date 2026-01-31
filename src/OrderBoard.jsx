@@ -30,13 +30,8 @@ import {
   getOrders,
   updateOrderStatus,
   updateOrderPayment,
-  syncOrdersFromSupabase,
+  trackOrder,
 } from "./db/database";
-import {
-  getOrdersFromSupabase,
-  updateOrderStatusInSupabase,
-  updateOrderPaymentInSupabase,
-} from "./db/supabase";
 import ReceiptPreview from "./ReceiptPreview";
 
 // Order workflow
@@ -58,7 +53,7 @@ export default function OrderBoard() {
   // =====================
   const fetchOrders = async () => {
     try {
-      const supabaseOrders = await getOrdersFromSupabase();
+      const supabaseOrders = await getOrders();
       setOrders(supabaseOrders);
     } catch (error) {
       console.error("Failed to load orders from Supabase:", error);
@@ -94,7 +89,7 @@ export default function OrderBoard() {
     if (order.status === status) return;
 
     try {
-      await updateOrderStatusInSupabase(order.receiptNumber, status);
+      await updateOrderStatus(order.id, status);
       fetchOrders(); // Refresh orders
     } catch (error) {
       console.error("Failed to update status:", error);
@@ -204,7 +199,7 @@ export default function OrderBoard() {
     // Get main service items (exclude add-ons like Downy, Zonrox, Liquid Detergent)
     const addOns = ["downy", "zonrox", "liquid detergent"];
     const mainServices = itemNames.filter(
-      (name) => !addOns.some((addon) => name.includes(addon))
+      (name) => !addOns.some((addon) => name.includes(addon)),
     );
 
     if (mainServices.length === 0) return []; // Only add-ons, show all statuses
@@ -214,7 +209,7 @@ export default function OrderBoard() {
     const hasWashOnly = mainServices.some((name) => name.includes("wash only"));
     const hasIronOnly = mainServices.every((name) => name === "iron");
     const hasFullService = mainServices.some(
-      (name) => name.includes("wash") && name.includes("dry")
+      (name) => name.includes("wash") && name.includes("dry"),
     );
 
     // If full service (Wash, Dry & Fold), don't skip anything
@@ -243,14 +238,17 @@ export default function OrderBoard() {
   // =====================
   const handlePaymentUpdate = async (receiptNumber, paymentData) => {
     try {
-      await updateOrderPaymentInSupabase(receiptNumber, paymentData);
-      setSnackbar({
-        open: true,
-        message: `Payment recorded! Method: ${paymentData.method}`,
-        severity: "success",
-      });
-      fetchOrders();
-      setSelectedReceipt(null);
+      const order = await trackOrder(receiptNumber);
+      if (order) {
+        await updateOrderPayment(order.id, paymentData);
+        setSnackbar({
+          open: true,
+          message: `Payment recorded! Method: ${paymentData.method}`,
+          severity: "success",
+        });
+        fetchOrders();
+        setSelectedReceipt(null);
+      }
     } catch (error) {
       console.error("Failed to update payment:", error);
       setSnackbar({
@@ -278,7 +276,7 @@ export default function OrderBoard() {
   // Filter released orders by selected date
   const getFilteredReleasedOrders = () => {
     const releasedOrders = orders.filter(
-      (o) => o.status?.toLowerCase() === "released"
+      (o) => o.status?.toLowerCase() === "released",
     );
 
     if (!releasedDateFilter) {
@@ -761,10 +759,10 @@ export default function OrderBoard() {
                     {/* Status Buttons */}
                     <Stack direction="row" spacing={0.5} flexWrap="wrap">
                       {STATUSES.filter(
-                        (status) => !getSkippedStatuses(order).includes(status)
+                        (status) => !getSkippedStatuses(order).includes(status),
                       ).map((status) => {
                         const filteredStatuses = STATUSES.filter(
-                          (s) => !getSkippedStatuses(order).includes(s)
+                          (s) => !getSkippedStatuses(order).includes(s),
                         );
                         const isCurrentOrPast =
                           filteredStatuses.indexOf(status) <=
@@ -811,8 +809,8 @@ export default function OrderBoard() {
                             {status === "Washing"
                               ? "Wash"
                               : status === "Drying"
-                              ? "Dry"
-                              : status}
+                                ? "Dry"
+                                : status}
                           </Button>
                         );
                       })}
@@ -892,7 +890,7 @@ export default function OrderBoard() {
                       ? `${
                           getFilteredReleasedOrders().length
                         } orders on ${new Date(
-                          releasedDateFilter
+                          releasedDateFilter,
                         ).toLocaleDateString("en-PH", {
                           month: "short",
                           day: "numeric",
@@ -900,7 +898,7 @@ export default function OrderBoard() {
                         })}`
                       : `${
                           orders.filter(
-                            (o) => o.status?.toLowerCase() === "released"
+                            (o) => o.status?.toLowerCase() === "released",
                           ).length
                         } total completed orders`}
                   </Typography>
