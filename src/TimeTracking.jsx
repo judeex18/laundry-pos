@@ -762,7 +762,7 @@ export default function TimeTracking() {
       {/* Quick Actions */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} md={6}>
-          <Card elevation={2} sx={{ borderRadius: 3 }}>
+          <Card elevation={2} sx={{ borderRadius: 2 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                 <PlayArrowIcon sx={{ mr: 1, color: "#10b981" }} />
@@ -787,7 +787,7 @@ export default function TimeTracking() {
         </Grid>
 
         <Grid item xs={12} md={6}>
-          <Card elevation={2} sx={{ borderRadius: 3 }}>
+          <Card elevation={2} sx={{ borderRadius: 2 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                 <PersonIcon sx={{ mr: 1, color: "#f59e0b" }} />
