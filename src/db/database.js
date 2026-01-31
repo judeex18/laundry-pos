@@ -90,24 +90,27 @@ const generateReceiptNumber = async () => {
     today.getMonth() + 1,
   ).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
 
-  // Get count of orders for today from Supabase
-  const startOfDay = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
-  );
-  const endOfDay = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate() + 1,
-  );
+  // Get count of orders for today from Supabase with the same date prefix
   const { data: todayOrders } = await supabase
     .from("orders")
-    .select("id")
-    .gte("created_at", startOfDay.toISOString())
-    .lt("created_at", endOfDay.toISOString());
+    .select("receipt_number")
+    .ilike("receipt_number", `ORD-${datePrefix}-%`);
 
-  const orderNum = String((todayOrders?.length || 0) + 1).padStart(3, "0");
+  // Extract the highest number from existing receipts
+  let maxNumber = 0;
+  if (todayOrders && todayOrders.length > 0) {
+    todayOrders.forEach((order) => {
+      const parts = order.receipt_number.split("-");
+      if (parts.length >= 3) {
+        const num = parseInt(parts[2]);
+        if (!isNaN(num) && num > maxNumber) {
+          maxNumber = num;
+        }
+      }
+    });
+  }
+
+  const orderNum = String(maxNumber + 1).padStart(3, "0");
   return `ORD-${datePrefix}-${orderNum}`;
 };
 
@@ -208,20 +211,45 @@ export const updateOrderPayment = async (id, paymentData) => {
 
 // Track order by receipt number (for customer tracking)
 export const trackOrder = async (receiptNumber) => {
+  // Clean the input
+  const cleanReceiptNumber = receiptNumber.trim();
+
   // Try exact match first
   let { data, error } = await supabase
     .from("orders")
     .select("*")
-    .eq("receipt_number", receiptNumber)
+    .eq("receipt_number", cleanReceiptNumber)
     .single();
 
   if (error || !data) {
-    // Try by ID if numeric
-    if (!isNaN(receiptNumber)) {
+    // Try case-insensitive match
+    const result = await supabase
+      .from("orders")
+      .select("*")
+      .ilike("receipt_number", cleanReceiptNumber);
+    data = result.data?.[0];
+  }
+
+  if (!data) {
+    // Try partial match (last part of receipt number)
+    const parts = cleanReceiptNumber.split("-");
+    if (parts.length >= 3) {
+      const lastPart = parts[parts.length - 1];
       const result = await supabase
         .from("orders")
         .select("*")
-        .eq("id", parseInt(receiptNumber))
+        .ilike("receipt_number", `%${lastPart}`);
+      data = result.data?.[0];
+    }
+  }
+
+  if (!data) {
+    // Try by ID if numeric
+    if (!isNaN(cleanReceiptNumber)) {
+      const result = await supabase
+        .from("orders")
+        .select("*")
+        .eq("id", parseInt(cleanReceiptNumber))
         .single();
       data = result.data;
     }

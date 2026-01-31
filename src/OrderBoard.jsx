@@ -238,8 +238,15 @@ export default function OrderBoard() {
   // =====================
   const handlePaymentUpdate = async (receiptNumber, paymentData) => {
     try {
+      console.log("Payment update called with:", {
+        receiptNumber,
+        paymentData,
+      });
       const order = await trackOrder(receiptNumber);
+      console.log("Order found:", order);
+
       if (order) {
+        console.log("Updating payment for order ID:", order.id);
         await updateOrderPayment(order.id, paymentData);
         setSnackbar({
           open: true,
@@ -248,6 +255,13 @@ export default function OrderBoard() {
         });
         fetchOrders();
         setSelectedReceipt(null);
+      } else {
+        console.error("Order not found for receipt:", receiptNumber);
+        setSnackbar({
+          open: true,
+          message: "Order not found",
+          severity: "error",
+        });
       }
     } catch (error) {
       console.error("Failed to update payment:", error);

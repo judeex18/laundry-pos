@@ -92,7 +92,9 @@ function TrackOrder() {
     setTrackingResult(null);
 
     try {
+      console.log("Searching for receipt number:", receiptNumber.trim());
       const result = await trackOrder(receiptNumber.trim());
+      console.log("Search result:", result);
 
       if (result) {
         setTrackingResult(result);
@@ -100,6 +102,7 @@ function TrackOrder() {
         setTrackingError("No order found with this receipt number");
       }
     } catch (error) {
+      console.error("Tracking error:", error);
       setTrackingError(
         "Unable to connect to server. Please check your connection.",
       );
