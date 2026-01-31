@@ -317,6 +317,58 @@ export default function TimeTracking() {
     };
   }, [cameraDialog.open]);
 
+  // Salary calculation function
+  const calculateSalary = (staffName, records) => {
+    // Salary rates per day for 8 hours
+    const SALARY_RATES = {
+      "Belen Misal": 250,
+      "Luz Amoguis": 300,
+    };
+
+    const ratePerDay = SALARY_RATES[staffName] || 0;
+    const ratePerHour = ratePerDay / 8; // Calculate hourly rate
+
+    // Filter only completed records
+    const completedRecords = records.filter((r) => r.status === "completed");
+
+    let totalSalary = 0;
+    let totalDeductions = 0;
+    let totalWorkedHours = 0;
+
+    completedRecords.forEach((record) => {
+      const hoursWorked = record.totalHours || 0;
+      totalWorkedHours += hoursWorked;
+
+      // Calculate expected hours (8 hours per day)
+      const expectedHours = 8;
+
+      if (hoursWorked >= expectedHours) {
+        // Full day salary if worked 8+ hours
+        totalSalary += ratePerDay;
+      } else {
+        // Pro-rated salary for undertime
+        const actualSalary = (hoursWorked / expectedHours) * ratePerDay;
+        totalSalary += actualSalary;
+
+        // Calculate deduction for undertime
+        const deduction = ratePerDay - actualSalary;
+        totalDeductions += deduction;
+      }
+    });
+
+    const netSalary = totalSalary - totalDeductions;
+
+    return {
+      ratePerDay,
+      ratePerHour,
+      totalWorkedHours,
+      totalSalary: Math.round(totalSalary * 100) / 100,
+      totalDeductions: Math.round(totalDeductions * 100) / 100,
+      netSalary: Math.round(netSalary * 100) / 100,
+      completedDays: completedRecords.length,
+    };
+  };
+
   // PDF Export Functions
   const exportStaffPDF = async (staffName, records) => {
     const doc = new jsPDF();
@@ -347,13 +399,16 @@ export default function TimeTracking() {
     doc.setFontSize(12);
     doc.text(`Staff: ${staffName}`, 105, 34, { align: "center" });
 
-    // Calculate summary
+    // Calculate summary and salary
     const completedRecords = records.filter((r) => r.status === "completed");
     const totalHours = completedRecords.reduce(
       (sum, r) => sum + (r.totalHours || 0),
       0,
     );
     const totalDays = new Set(records.map((r) => r.date)).size;
+
+    // Calculate salary
+    const salaryInfo = calculateSalary(staffName, records);
 
     // Summary info
     doc.setFontSize(10);
@@ -366,6 +421,40 @@ export default function TimeTracking() {
       42,
       { align: "center" },
     );
+
+    // Salary information
+    doc.setFontSize(11);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Salary Information", 105, 50, { align: "center" });
+
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    let yPos = 58;
+    doc.text(`Daily Rate: ₱${salaryInfo.ratePerDay}`, 20, yPos);
+    doc.text(`Hourly Rate: ₱${salaryInfo.ratePerHour.toFixed(2)}`, 80, yPos);
+    doc.text(`Completed Days: ${salaryInfo.completedDays}`, 140, yPos);
+
+    yPos += 6;
+    doc.text(
+      `Total Worked Hours: ${salaryInfo.totalWorkedHours.toFixed(2)}h`,
+      20,
+      yPos,
+    );
+    doc.text(`Gross Salary: ₱${salaryInfo.totalSalary.toFixed(2)}`, 80, yPos);
+    doc.text(
+      `Total Deductions: ₱${salaryInfo.totalDeductions.toFixed(2)}`,
+      140,
+      yPos,
+    );
+
+    yPos += 6;
+    doc.setFontSize(10);
+    doc.setTextColor(55, 93, 165);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Net Salary: ₱${salaryInfo.netSalary.toFixed(2)}`, 105, yPos, {
+      align: "center",
+    });
+    doc.setFont("helvetica", "normal");
 
     // Table data
     const tableData = records.map((record, index) => [
@@ -393,7 +482,7 @@ export default function TimeTracking() {
 
     // Add table
     autoTable(doc, {
-      startY: 50,
+      startY: yPos + 10,
       head: [
         [
           "#",
@@ -495,7 +584,7 @@ export default function TimeTracking() {
       doc.text(`Staff: ${staffName}`, 14, currentY);
       currentY += 6;
 
-      // Calculate summary
+      // Calculate summary and salary
       const completedRecords = staffRecords.filter(
         (r) => r.status === "completed",
       );
@@ -504,12 +593,15 @@ export default function TimeTracking() {
         0,
       );
 
+      // Calculate salary for this staff member
+      const salaryInfo = calculateSalary(staffName, staffRecords);
+
       doc.setFontSize(9);
       doc.setTextColor(100, 100, 100);
       doc.text(
         `Total Hours: ${totalHours.toFixed(2)} | Records: ${
           completedRecords.length
-        }`,
+        } | Net Salary: ₱${salaryInfo.netSalary.toFixed(2)}`,
         14,
         currentY,
       );
