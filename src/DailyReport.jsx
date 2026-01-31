@@ -28,9 +28,6 @@ import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
-import StorageIcon from "@mui/icons-material/Storage";
-import DeleteIcon from "@mui/icons-material/Delete";
-import RefreshIcon from "@mui/icons-material/Refresh";
 import DownloadIcon from "@mui/icons-material/Download";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import TableChartIcon from "@mui/icons-material/TableChart";
@@ -43,14 +40,19 @@ import autoTable from "jspdf-autotable";
 import {
   getDailyReport,
   getOrderStats,
-  clearAllOrders,
-  resetServices,
   getOrdersForExport,
 } from "./db/database";
 
 export default function DailyReport() {
   const [data, setData] = useState([]);
-  const [stats, setStats] = useState({ total: 0, released: 0 });
+  const [stats, setStats] = useState({
+    total: 0,
+    received: 0,
+    washing: 0,
+    drying: 0,
+    ready: 0,
+    released: 0,
+  });
   // Deduction state
   const [deductions, setDeductions] = useState([]);
   const [deductionModalOpen, setDeductionModalOpen] = useState(false);
@@ -89,7 +91,7 @@ export default function DailyReport() {
     const today = new Date().toDateString();
     localStorage.setItem(
       `dailyDeductions_${today}`,
-      JSON.stringify(newDeductions)
+      JSON.stringify(newDeductions),
     );
     setDeductionModalOpen(false);
   };
@@ -179,31 +181,6 @@ export default function DailyReport() {
     return "linear-gradient(135deg, #375da5 0%, #2a4a8a 100%)";
   };
 
-  const handleClearOrders = async () => {
-    if (
-      window.confirm(
-        "Are you sure you want to clear all orders? This cannot be undone."
-      )
-    ) {
-      await clearAllOrders();
-      setDeductions([]);
-      const today = new Date().toDateString();
-      localStorage.setItem(`dailyDeductions_${today}`, JSON.stringify([]));
-      fetchReport();
-    }
-  };
-
-  const handleResetServices = async () => {
-    if (
-      window.confirm(
-        "Reset all services to default? This will refresh the services list."
-      )
-    ) {
-      await resetServices();
-      window.location.reload();
-    }
-  };
-
   // Export function
   const handleExport = async () => {
     try {
@@ -223,7 +200,7 @@ export default function DailyReport() {
 
       if (orders.length === 0) {
         alert(
-          "No paid orders found for the selected date range.\n\nTip: Only orders with a payment date (paidAt) are included in the sales export."
+          "No paid orders found for the selected date range.\n\nTip: Only orders with a payment date (paidAt) are included in the sales export.",
         );
         return;
       }
@@ -245,7 +222,7 @@ export default function DailyReport() {
     // Calculate total revenue
     const totalRevenueRaw = orders.reduce(
       (sum, order) => sum + Number(order.total || 0),
-      0
+      0,
     );
     // Subtract deductions
     const deductionTotal = deductions.reduce((sum, d) => sum + d.amount, 0);
@@ -265,7 +242,7 @@ export default function DailyReport() {
         ],
         [""],
       ],
-      { origin: "A1" }
+      { origin: "A1" },
     );
 
     // Format data for Excel
@@ -399,7 +376,7 @@ export default function DailyReport() {
     // Calculate total revenue
     const totalRevenueRaw = orders.reduce(
       (sum, order) => sum + Number(order.total || 0),
-      0
+      0,
     );
     const deductionTotal = deductions.reduce((sum, d) => sum + d.amount, 0);
     const totalRevenue = totalRevenueRaw - deductionTotal;
@@ -455,7 +432,7 @@ export default function DailyReport() {
         doc.text(
           `- ${d.amount.toLocaleString()} ${d.details || ""}`,
           18,
-          currentY
+          currentY,
         );
         currentY += 6;
       });
@@ -463,7 +440,7 @@ export default function DailyReport() {
     doc.text(
       `Total Revenue: ${totalRevenue.toLocaleString()}`,
       14,
-      currentY + 7
+      currentY + 7,
     );
 
     // Generate filename
@@ -681,7 +658,7 @@ export default function DailyReport() {
           },
           {
             label: "In Progress",
-            value: stats.washing + stats.drying,
+            value: (stats.washing || 0) + (stats.drying || 0),
             gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
             icon: "🔄",
           },
@@ -1143,75 +1120,6 @@ export default function DailyReport() {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Data Management - Enhanced */}
-      <Fade in timeout={1100}>
-        <Paper
-          elevation={0}
-          sx={{
-            p: { xs: 2.5, sm: 3 },
-            borderRadius: 4,
-            background: "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(20px)",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
-            <Avatar
-              sx={{
-                background: "linear-gradient(135deg, #64748b 0%, #475569 100%)",
-                width: 44,
-                height: 44,
-              }}
-            >
-              <StorageIcon />
-            </Avatar>
-            <Box>
-              <Typography
-                variant="h6"
-                sx={{ fontWeight: 700, color: "#1e3a5f" }}
-              >
-                Data Management
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                All data stored locally on this device
-              </Typography>
-            </Box>
-          </Box>
-          <Stack direction="row" spacing={2} flexWrap="wrap">
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<DeleteIcon />}
-              onClick={handleClearOrders}
-              sx={{
-                textTransform: "none",
-                borderRadius: 3,
-                fontWeight: 600,
-                px: 3,
-                "&:hover": {
-                  bgcolor: "rgba(239, 68, 68, 0.1)",
-                },
-              }}
-            >
-              Clear All Orders
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={handleResetServices}
-              sx={{
-                textTransform: "none",
-                borderRadius: 3,
-                fontWeight: 600,
-                px: 3,
-              }}
-            >
-              Reset Services
-            </Button>
-          </Stack>
-        </Paper>
-      </Fade>
     </Box>
   );
 }

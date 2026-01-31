@@ -387,26 +387,6 @@ export const getMonthlyOrdersForExport = async () => {
 };
 
 // =====================
-// CLEAR DATA (for testing)
-// =====================
-export const clearAllOrders = async () => {
-  const { error } = await supabase.from("orders").delete().neq("id", 0);
-  if (error) throw error;
-};
-
-export const clearInventory = async () => {
-  await supabase.from("inventory").delete().neq("id", 0);
-  await supabase.from("inventory_logs").delete().neq("id", 0);
-  return true;
-};
-
-export const resetDatabase = async () => {
-  await initializeServices();
-};
-
-// =====================
-// CLEAR DATA (for testing)
-// =====================
 // INVENTORY OPERATIONS
 // =====================
 

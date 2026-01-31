@@ -42,8 +42,6 @@ import DownloadIcon from "@mui/icons-material/Download";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import TableChartIcon from "@mui/icons-material/TableChart";
 import AddBoxIcon from "@mui/icons-material/AddBox";
-import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
-import StorageIcon from "@mui/icons-material/Storage";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import InputLabel from "@mui/material/InputLabel";
@@ -57,7 +55,6 @@ import {
   deductStock,
   getInventoryLogs,
   addInventoryItem,
-  clearInventory,
 } from "./db/database";
 
 export default function Inventory() {
@@ -383,7 +380,7 @@ export default function Inventory() {
         ],
         [""],
       ],
-      { origin: "A1" }
+      { origin: "A1" },
     );
 
     // Add data starting from row 5
@@ -512,7 +509,7 @@ export default function Inventory() {
     doc.text(
       `Added: ${addedCount} | Deducted: ${deductedCount}`,
       14,
-      finalY + 6
+      finalY + 6,
     );
 
     // Download file
@@ -640,8 +637,8 @@ export default function Inventory() {
                       status.color === "error"
                         ? "3px solid #ef4444"
                         : status.color === "warning"
-                        ? "3px solid #f59e0b"
-                        : "3px solid #10b981",
+                          ? "3px solid #f59e0b"
+                          : "3px solid #10b981",
                     "&:hover": {
                       transform: "translateY(-4px)",
                       boxShadow: "0 12px 24px rgba(0,0,0,0.15)",
@@ -696,8 +693,8 @@ export default function Inventory() {
                             status.color === "error"
                               ? "#ef4444"
                               : status.color === "warning"
-                              ? "#f59e0b"
-                              : "#10b981",
+                                ? "#f59e0b"
+                                : "#10b981",
                           color: "white",
                           "& .MuiChip-icon": { color: "white" },
                         }}
@@ -1104,7 +1101,7 @@ export default function Inventory() {
                     const startOfMonth = new Date(
                       today.getFullYear(),
                       today.getMonth(),
-                      1
+                      1,
                     );
                     setStartDate(startOfMonth.toISOString().split("T")[0]);
                     setEndDate(today.toISOString().split("T")[0]);
@@ -1294,76 +1291,6 @@ export default function Inventory() {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Data Management */}
-      <Fade in timeout={1100}>
-        <Paper
-          elevation={0}
-          sx={{
-            p: { xs: 2.5, sm: 3 },
-            mt: 3,
-            borderRadius: 4,
-            background: "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(20px)",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
-            <Avatar
-              sx={{
-                background: "linear-gradient(135deg, #64748b 0%, #475569 100%)",
-                width: 44,
-                height: 44,
-              }}
-            >
-              <StorageIcon />
-            </Avatar>
-            <Box>
-              <Typography
-                variant="h6"
-                sx={{ fontWeight: 700, color: "#1e3a5f" }}
-              >
-                Data Management
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Manage inventory data stored locally
-              </Typography>
-            </Box>
-          </Box>
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<DeleteForeverIcon />}
-            onClick={async () => {
-              if (
-                window.confirm(
-                  "Are you sure you want to clear all inventory items and logs? This cannot be undone."
-                )
-              ) {
-                await clearInventory();
-                fetchInventory();
-                fetchLogs();
-                setSnackbar({
-                  open: true,
-                  message: "All inventory items and logs cleared",
-                  severity: "success",
-                });
-              }
-            }}
-            sx={{
-              textTransform: "none",
-              borderRadius: 3,
-              fontWeight: 600,
-              px: 3,
-              "&:hover": {
-                bgcolor: "rgba(239, 68, 68, 0.1)",
-              },
-            }}
-          >
-            Clear Inventory
-          </Button>
-        </Paper>
-      </Fade>
 
       {/* Snackbar */}
       <Snackbar
