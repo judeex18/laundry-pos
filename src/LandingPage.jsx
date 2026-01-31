@@ -16,6 +16,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import HomeIcon from "@mui/icons-material/Home";
+import { supabase } from "./db/supabase";
 
 function LandingPage({ onLogin }) {
   // Login state
@@ -25,17 +26,23 @@ function LandingPage({ onLogin }) {
   const [loginError, setLoginError] = useState("");
 
   // Handle login
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError("");
 
-    // Admin credentials
-    if (username === "admin" && password === "03282023") {
-      localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("userRole", "admin");
-      onLogin();
-    } else {
-      setLoginError("Invalid username or password");
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: username,
+        password: password,
+      });
+      if (error) {
+        setLoginError(error.message);
+      } else {
+        localStorage.setItem("isLoggedIn", "true");
+        onLogin();
+      }
+    } catch (error) {
+      setLoginError("Login failed");
     }
   };
 

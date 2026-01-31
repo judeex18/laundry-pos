@@ -23,6 +23,7 @@ import Inventory from "./Inventory";
 import LandingPage from "./LandingPage";
 import TrackOrder from "./TrackOrder";
 import TimeTracking from "./TimeTracking";
+import { supabase } from "./db/supabase";
 
 // Custom theme with Ian's Laundry Hub colors (Blue & Gold theme)
 const theme = createTheme({
@@ -130,9 +131,8 @@ const theme = createTheme({
 });
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return localStorage.getItem("isLoggedIn") === "true";
-  });
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [page, setPage] = useState(() => {
     // Restore the last visited tab from localStorage
@@ -144,6 +144,23 @@ function App() {
     window.location.pathname === "/admin" ||
     window.location.pathname === "/admin/";
 
+  useEffect(() => {
+    // Check initial auth state
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsLoggedIn(!!session);
+      setLoading(false);
+    };
+    checkAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsLoggedIn(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const handleTabChange = (newPage) => {
     setPage(newPage);
     localStorage.setItem("currentTab", newPage);
@@ -153,13 +170,17 @@ function App() {
     setIsLoggedIn(true);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("userRole");
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem("currentTab");
     setIsLoggedIn(false);
     // Redirect to home page after logout
     window.location.href = "/";
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   // If not on admin route, show public tracker
   if (!isAdminRoute) {

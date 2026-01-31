@@ -1,26 +1,8 @@
 // =====================
-// Dexie Database - Fully Offline POS
+// Supabase Database - Online POS
 // =====================
 
-import Dexie from "dexie";
-
-// Create database
-const db = new Dexie("LaundryPOS");
-
-// Define schema - increment version to force update
-db.version(7).stores({
-  services: "++id, name, price, active",
-  orders:
-    "++id, receiptNumber, status, customerName, phone, total, paymentMethod, createdAt",
-  inventory: "++id, name, type, quantity, unit, createdAt, updatedAt",
-  inventoryLogs:
-    "++id, inventoryId, action, quantity, note, customerName, createdAt",
-  timeRecords:
-    "++id, [staffName+date], staffName, date, timeIn, timeOut, totalHours, status, notes, timeInPhoto, timeOutPhoto, createdAt, updatedAt",
-});
-
-// Default inventory items (empty - user will add manually)
-const DEFAULT_INVENTORY = [];
+import { supabase } from './supabase';
 
 // Default services list
 const DEFAULT_SERVICES = [
@@ -33,67 +15,54 @@ const DEFAULT_SERVICES = [
   { name: "Zonrox", price: 15, active: true },
 ];
 
-// Lock to prevent concurrent initialization
-let isInitializing = false;
-let initPromise = null;
-
 // =====================
-// Initialize with default services
+// Initialize with default services (insert if not exist)
 // =====================
 export const initializeServices = async () => {
-  // If already initializing, wait for it to complete
-  if (isInitializing && initPromise) {
-    return initPromise;
-  }
-
-  isInitializing = true;
-  initPromise = (async () => {
-    try {
-      const existing = await db.services.toArray();
-
-      // Check for duplicates or wrong count
-      const names = existing.map((s) => s.name);
-      const hasDuplicates = names.length !== new Set(names).size;
-      const wrongCount = existing.length !== DEFAULT_SERVICES.length;
-
-      if (existing.length === 0 || hasDuplicates || wrongCount) {
-        await db.services.clear();
-        await db.services.bulkAdd(DEFAULT_SERVICES);
-        console.log("✅ Default services initialized (cleaned)");
-      }
-    } finally {
-      isInitializing = false;
+  try {
+    // Check if services exist
+    const { data: existing } = await supabase.from('services').select('*');
+    if (existing.length === 0) {
+      const { error } = await supabase.from('services').insert(DEFAULT_SERVICES);
+      if (error) throw error;
+      console.log("✅ Default services initialized in Supabase");
     }
-  })();
-
-  return initPromise;
+  } catch (error) {
+    console.error("Error initializing services:", error);
+  }
 };
 
 // Reset services (clears and re-adds default services)
 export const resetServices = async () => {
-  await db.services.clear();
-  await db.services.bulkAdd(DEFAULT_SERVICES);
-  console.log("✅ Services reset to default");
+  await supabase.from('services').delete().neq('id', 0); // Delete all
+  const { error } = await supabase.from('services').insert(DEFAULT_SERVICES);
+  if (error) throw error;
+  console.log("✅ Services reset to default in Supabase");
 };
 
 // =====================
 // SERVICES OPERATIONS
 // =====================
 export const getServices = async () => {
-  const all = await db.services.toArray();
-  return all.filter((s) => s.active === true);
+  const { data, error } = await supabase.from('services').select('*').eq('active', true);
+  if (error) throw error;
+  return data;
 };
 
 export const addService = async (service) => {
-  return await db.services.add({ ...service, active: true });
+  const { data, error } = await supabase.from('services').insert({ ...service, active: true }).select();
+  if (error) throw error;
+  return data[0];
 };
 
 export const updateService = async (id, updates) => {
-  return await db.services.update(id, updates);
+  const { error } = await supabase.from('services').update(updates).eq('id', id);
+  if (error) throw error;
 };
 
 export const deleteService = async (id) => {
-  return await db.services.update(id, { active: false });
+  const { error } = await supabase.from('services').update({ active: false }).eq('id', id);
+  if (error) throw error;
 };
 
 // =====================
@@ -107,185 +76,142 @@ const generateReceiptNumber = async () => {
     today.getMonth() + 1
   ).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
 
-  // Get count of orders for today
-  const allOrders = await db.orders.toArray();
-  const todayOrders = allOrders.filter((order) => {
-    const orderDate = new Date(order.createdAt);
-    return (
-      orderDate.getFullYear() === today.getFullYear() &&
-      orderDate.getMonth() === today.getMonth() &&
-      orderDate.getDate() === today.getDate()
-    );
-  });
+  // Get count of orders for today from Supabase
+  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+  const { data: todayOrders } = await supabase
+    .from('orders')
+    .select('id')
+    .gte('created_at', startOfDay.toISOString())
+    .lt('created_at', endOfDay.toISOString());
 
-  const orderNum = String(todayOrders.length + 1).padStart(3, "0");
+  const orderNum = String((todayOrders?.length || 0) + 1).padStart(3, "0");
   return `ORD-${datePrefix}-${orderNum}`;
 };
-
-import { syncOrderToSupabase, getOrdersFromSupabase } from "./supabase";
 
 export const createOrder = async (orderData) => {
   const receiptNumber = await generateReceiptNumber();
   const order = {
-    receiptNumber,
-    customerName: orderData.customer,
+    receipt_number: receiptNumber,
+    customer_name: orderData.customer,
     phone: orderData.phone,
     items: orderData.items,
     total: orderData.total,
-    paymentMethod: orderData.method,
-    gcashNumber: orderData.gcashNumber || null,
-    gcashRefNumber: orderData.gcashRefNumber || null,
+    payment_method: orderData.method,
+    gcash_number: orderData.gcashNumber || null,
+    gcash_ref_number: orderData.gcashRefNumber || null,
     status: "Received",
-    createdAt: new Date().toISOString(),
+    created_at: new Date().toISOString(),
   };
-  const id = await db.orders.add(order);
-
-  // Sync to Supabase (non-blocking)
-  syncOrderToSupabase(order).catch(() => {
-    console.log("⚠️ Supabase sync failed, order saved locally");
-  });
-
-  return { id, receiptNumber };
-};
-
-// Sync orders from Supabase to local IndexedDB
-export const syncOrdersFromSupabase = async () => {
-  try {
-    const supabaseOrders = await getOrdersFromSupabase();
-
-    if (supabaseOrders.length === 0) {
-      console.log("ℹ️ No orders found in Supabase");
-      return;
-    }
-
-    // Get existing local orders to avoid duplicates
-    const localOrders = await db.orders.toArray();
-    const localReceiptNumbers = new Set(
-      localOrders.map((o) => o.receiptNumber)
-    );
-
-    // Filter out orders that already exist locally
-    const newOrders = supabaseOrders.filter(
-      (order) => !localReceiptNumbers.has(order.receiptNumber)
-    );
-
-    if (newOrders.length === 0) {
-      console.log("ℹ️ All Supabase orders already exist locally");
-      return;
-    }
-
-    // Transform Supabase orders to match local schema
-    const ordersToAdd = newOrders.map((order) => ({
-      receiptNumber: order.receiptNumber,
-      customerName: order.customerName,
-      phone: order.phone,
-      items: order.items,
-      total: order.total,
-      paymentMethod: order.paymentMethod,
-      status: order.status,
-      createdAt: order.createdAt,
-      // Add any missing fields with defaults
-      gcashNumber: order.gcashNumber || null,
-      gcashRefNumber: order.gcashRefNumber || null,
-      amountPaid: order.amountPaid || null,
-      change: order.change || null,
-    }));
-
-    await db.orders.bulkAdd(ordersToAdd);
-    console.log(
-      `✅ Synced ${ordersToAdd.length} orders from Supabase to local DB`
-    );
-
-    return ordersToAdd.length;
-  } catch (error) {
-    console.error("❌ Failed to sync orders from Supabase:", error);
-    return 0;
-  }
+  const { data, error } = await supabase.from('orders').insert(order).select();
+  if (error) throw error;
+  return { id: data[0].id, receiptNumber };
 };
 
 export const getOrders = async () => {
-  return await db.orders.orderBy("createdAt").reverse().toArray();
+  const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data.map(order => ({
+    id: order.id,
+    receiptNumber: order.receipt_number,
+    customerName: order.customer_name,
+    phone: order.phone,
+    items: order.items,
+    total: order.total,
+    paymentMethod: order.payment_method,
+    status: order.status,
+    createdAt: order.created_at,
+    gcashNumber: order.gcash_number,
+    gcashRefNumber: order.gcash_ref_number,
+  }));
 };
 
 export const getOrdersByStatus = async (status) => {
-  return await db.orders.where("status").equals(status).toArray();
+  const { data, error } = await supabase.from('orders').select('*').eq('status', status);
+  if (error) throw error;
+  return data.map(order => ({
+    id: order.id,
+    receiptNumber: order.receipt_number,
+    customerName: order.customer_name,
+    phone: order.phone,
+    items: order.items,
+    total: order.total,
+    paymentMethod: order.payment_method,
+    status: order.status,
+    createdAt: order.created_at,
+    gcashNumber: order.gcash_number,
+    gcashRefNumber: order.gcash_ref_number,
+  }));
 };
 
 export const updateOrderStatus = async (id, status) => {
   const updateData = { status };
-
-  // Add releasedAt timestamp when order is released
   if (status === "Released") {
-    updateData.releasedAt = new Date().toISOString();
+    updateData.released_at = new Date().toISOString();
   }
-
-  const result = await db.orders.update(id, updateData);
-
-  // Get the updated order and sync to Supabase
-  const order = await db.orders.get(id);
-  if (order) {
-    syncOrderToSupabase(order).catch(() => {
-      console.log("⚠️ Status sync failed, updated locally");
-    });
-  }
-
-  return result;
+  const { error } = await supabase.from('orders').update(updateData).eq('id', id);
+  if (error) throw error;
 };
 
 // Update order payment (for cashier functionality)
 export const updateOrderPayment = async (id, paymentData) => {
   const updateData = {
-    paymentMethod: paymentData.method,
-    amountPaid: paymentData.amountPaid,
+    payment_method: paymentData.method,
+    amount_paid: paymentData.amountPaid,
     change: paymentData.change,
-    paidAt: new Date().toISOString(),
+    paid_at: new Date().toISOString(),
   };
 
   // Add GCash details if applicable
   if (paymentData.method === "GCash") {
-    updateData.gcashNumber = paymentData.gcashNumber || null;
-    updateData.gcashRefNumber = paymentData.gcashRefNumber || null;
+    updateData.gcash_number = paymentData.gcashNumber || null;
+    updateData.gcash_ref_number = paymentData.gcashRefNumber || null;
   }
 
-  const result = await db.orders.update(id, updateData);
-
-  // Get the updated order and sync to Supabase
-  const order = await db.orders.get(id);
-  if (order) {
-    syncOrderToSupabase(order).catch(() => {
-      console.log("⚠️ Payment sync failed, updated locally");
-    });
-  }
-
-  return result;
+  const { error } = await supabase.from('orders').update(updateData).eq('id', id);
+  if (error) throw error;
 };
 
 // Track order by receipt number (for customer tracking)
 export const trackOrder = async (receiptNumber) => {
   // Try exact match first
-  let order = await db.orders
-    .where("receiptNumber")
-    .equals(receiptNumber)
-    .first();
+  let { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('receipt_number', receiptNumber)
+    .single();
 
-  // If not found, try case-insensitive search
-  if (!order) {
-    const allOrders = await db.orders.toArray();
-    order = allOrders.find(
-      (o) => o.receiptNumber?.toLowerCase() === receiptNumber.toLowerCase()
-    );
+  if (error || !data) {
+    // Try by ID if numeric
+    if (!isNaN(receiptNumber)) {
+      const result = await supabase.from('orders').select('*').eq('id', parseInt(receiptNumber)).single();
+      data = result.data;
+    }
   }
 
-  // Also try searching by ID if input is numeric
-  if (!order && !isNaN(receiptNumber)) {
-    order = await db.orders.get(parseInt(receiptNumber));
-  }
+  if (!data) return null;
 
-  return order;
+  return {
+    id: data.id,
+    receiptNumber: data.receipt_number,
+    customerName: data.customer_name,
+    phone: data.phone,
+    items: data.items,
+    total: data.total,
+    paymentMethod: data.payment_method,
+    status: data.status,
+    createdAt: data.created_at,
+    gcashNumber: data.gcash_number,
+    gcashRefNumber: data.gcash_ref_number,
+    amountPaid: data.amount_paid,
+    change: data.change,
+    paidAt: data.paid_at,
+  };
 };
 
 export const deleteOrder = async (id) => {
-  return await db.orders.delete(id);
+  const { error } = await supabase.from('orders').delete().eq('id', id);
+  if (error) throw error;
 };
 
 // =====================
@@ -293,29 +219,22 @@ export const deleteOrder = async (id) => {
 // =====================
 export const getDailyReport = async () => {
   const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(
-    today.getMonth() + 1
-  ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-  const allOrders = await db.orders.toArray();
+  const { data: orders, error } = await supabase
+    .from('orders')
+    .select('*')
+    .not('paid_at', 'is', null)
+    .gte('paid_at', startOfDay.toISOString())
+    .lt('paid_at', endOfDay.toISOString());
 
-  // Filter orders that were PAID today (revenue is recognized on payment date)
-  const orders = allOrders.filter((order) => {
-    // Only count paid orders (must have paidAt date)
-    if (!order.paidAt) return false;
-
-    // Use paidAt date for revenue recognition
-    const paidDate = new Date(order.paidAt);
-    const paidDateStr = `${paidDate.getFullYear()}-${String(
-      paidDate.getMonth() + 1
-    ).padStart(2, "0")}-${String(paidDate.getDate()).padStart(2, "0")}`;
-    return paidDateStr === todayStr;
-  });
+  if (error) throw error;
 
   // Group by payment method
   const report = {};
   orders.forEach((order) => {
-    const method = order.paymentMethod || "Cash";
+    const method = order.payment_method || "Cash";
     if (!report[method]) {
       report[method] = { method, total: 0, count: 0 };
     }
@@ -328,20 +247,16 @@ export const getDailyReport = async () => {
 
 export const getOrderStats = async () => {
   const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(
-    today.getMonth() + 1
-  ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-  const allOrders = await db.orders.toArray();
+  const { data: orders, error } = await supabase
+    .from('orders')
+    .select('status')
+    .gte('created_at', startOfDay.toISOString())
+    .lt('created_at', endOfDay.toISOString());
 
-  // Filter to today's orders only
-  const orders = allOrders.filter((order) => {
-    const orderDate = new Date(order.createdAt);
-    const orderDateStr = `${orderDate.getFullYear()}-${String(
-      orderDate.getMonth() + 1
-    ).padStart(2, "0")}-${String(orderDate.getDate()).padStart(2, "0")}`;
-    return orderDateStr === todayStr;
-  });
+  if (error) throw error;
 
   const stats = {
     total: orders.length,
@@ -366,16 +281,31 @@ export const getOrderStats = async () => {
 // EXPORT REPORTS
 // =====================
 export const getOrdersForExport = async (startDate, endDate) => {
-  const orders = await db.orders.toArray();
+  const { data: orders, error } = await supabase
+    .from('orders')
+    .select('*')
+    .not('paid_at', 'is', null)
+    .gte('paid_at', startDate.toISOString())
+    .lte('paid_at', endDate.toISOString());
 
-  return orders.filter((order) => {
-    // Only include paid orders in revenue export
-    if (!order.paidAt) return false;
+  if (error) throw error;
 
-    // Use paidAt date for revenue recognition
-    const paidDate = new Date(order.paidAt);
-    return paidDate >= startDate && paidDate <= endDate;
-  });
+  return orders.map(order => ({
+    id: order.id,
+    receiptNumber: order.receipt_number,
+    customerName: order.customer_name,
+    phone: order.phone,
+    items: order.items,
+    total: order.total,
+    paymentMethod: order.payment_method,
+    status: order.status,
+    createdAt: order.created_at,
+    paidAt: order.paid_at,
+    amountPaid: order.amount_paid,
+    change: order.change,
+    gcashNumber: order.gcash_number,
+    gcashRefNumber: order.gcash_ref_number,
+  }));
 };
 
 export const getDailyOrdersForExport = async () => {
@@ -406,116 +336,93 @@ export const getMonthlyOrdersForExport = async () => {
 // CLEAR DATA (for testing)
 // =====================
 export const clearAllOrders = async () => {
-  return await db.orders.clear();
+  const { error } = await supabase.from('orders').delete().neq('id', 0);
+  if (error) throw error;
 };
 
 export const clearInventory = async () => {
-  await db.inventory.clear();
-  await db.inventoryLogs.clear();
-  localStorage.setItem("inventoryCleared", "true");
+  await supabase.from('inventory').delete().neq('id', 0);
+  await supabase.from('inventory_logs').delete().neq('id', 0);
   return true;
 };
 
 export const resetDatabase = async () => {
-  await db.orders.clear();
-  await db.services.clear();
   await initializeServices();
 };
 
-// Export database instance
-export default db;
-
+// =====================
+// CLEAR DATA (for testing)
 // =====================
 // INVENTORY OPERATIONS
 // =====================
 
-// Initialize inventory with default items (only on first run, not after clear)
-export const initializeInventory = async () => {
-  try {
-    // Check if inventory was intentionally cleared
-    const wasCleared = localStorage.getItem("inventoryCleared");
-    if (wasCleared === "true") {
-      return; // Don't auto-initialize if user cleared inventory
-    }
-
-    const existing = await db.inventory.toArray();
-    if (existing.length === 0) {
-      const now = new Date().toISOString();
-      const itemsWithTimestamp = DEFAULT_INVENTORY.map((item) => ({
-        ...item,
-        createdAt: now,
-        updatedAt: now,
-      }));
-      await db.inventory.bulkAdd(itemsWithTimestamp);
-      console.log("✅ Default inventory initialized");
-    }
-  } catch (error) {
-    console.error("Failed to initialize inventory:", error);
-  }
-};
-
 // Get all inventory items
 export const getInventory = async () => {
-  await initializeInventory();
-  return await db.inventory.toArray();
+  const { data, error } = await supabase.from('inventory').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
 };
 
 // Get inventory by type (e.g., 'downy')
 export const getInventoryByType = async (type) => {
-  await initializeInventory();
-  return await db.inventory.where("type").equals(type).toArray();
+  const { data, error } = await supabase.from('inventory').select('*').eq('type', type);
+  if (error) throw error;
+  return data;
 };
 
 // Get single inventory item
 export const getInventoryItem = async (id) => {
-  return await db.inventory.get(id);
+  const { data, error } = await supabase.from('inventory').select('*').eq('id', id).single();
+  if (error) throw error;
+  return data;
 };
 
 // Add new inventory item
 export const addInventoryItem = async (name, type, quantity, unit) => {
-  // Clear the "inventoryCleared" flag when user adds new item
-  localStorage.removeItem("inventoryCleared");
-
   const newItem = {
     name,
     type,
     quantity: quantity || 0,
     unit: unit || "pcs",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
 
-  const id = await db.inventory.add(newItem);
+  const { data, error } = await supabase.from('inventory').insert(newItem).select();
+  if (error) throw error;
+
+  const item = data[0];
 
   // Log the initial stock if quantity > 0
   if (quantity > 0) {
-    await db.inventoryLogs.add({
-      inventoryId: id,
+    await supabase.from('inventory_logs').insert({
+      inventory_id: item.id,
       action: "add",
       quantity: quantity,
       note: `Initial stock for ${name}`,
-      customerName: "",
-      createdAt: new Date().toISOString(),
+      customer_name: "",
+      created_at: new Date().toISOString(),
     });
   }
 
-  return { id, ...newItem };
+  return item;
 };
 
 // Add stock to inventory
 export const addStock = async (id, quantity, note = "", customerName = "") => {
-  const item = await db.inventory.get(id);
+  const item = await getInventoryItem(id);
   if (!item) throw new Error("Inventory item not found");
 
   const newQuantity = item.quantity + quantity;
-  await db.inventory.update(id, {
+  const { error } = await supabase.from('inventory').update({
     quantity: newQuantity,
-    updatedAt: new Date().toISOString(),
-  });
+    updated_at: new Date().toISOString(),
+  }).eq('id', id);
+  if (error) throw error;
 
   // Log the action
-  await db.inventoryLogs.add({
-    inventoryId: id,
+  await supabase.from('inventory_logs').insert({
+    inventory_id: id,
     action: "add",
     quantity: quantity,
     note: note || `Added ${quantity} ${item.unit}`,
@@ -533,23 +440,24 @@ export const deductStock = async (
   note = "",
   customerName = ""
 ) => {
-  const item = await db.inventory.get(id);
+  const item = await getInventoryItem(id);
   if (!item) throw new Error("Inventory item not found");
 
   const newQuantity = Math.max(0, item.quantity - quantity);
-  await db.inventory.update(id, {
+  const { error } = await supabase.from('inventory').update({
     quantity: newQuantity,
-    updatedAt: new Date().toISOString(),
-  });
+    updated_at: new Date().toISOString(),
+  }).eq('id', id);
+  if (error) throw error;
 
   // Log the action
-  await db.inventoryLogs.add({
-    inventoryId: id,
+  await supabase.from('inventory_logs').insert({
+    inventory_id: id,
     action: "deduct",
     quantity: quantity,
     note: note || `Deducted ${quantity} ${item.unit}`,
-    customerName: customerName || "",
-    createdAt: new Date().toISOString(),
+    customer_name: customerName || "",
+    created_at: new Date().toISOString(),
   });
 
   return newQuantity;
@@ -557,22 +465,22 @@ export const deductStock = async (
 
 // Update inventory item quantity directly
 export const updateInventoryQuantity = async (id, quantity) => {
-  return await db.inventory.update(id, {
+  const { error } = await supabase.from('inventory').update({
     quantity: quantity,
-    updatedAt: new Date().toISOString(),
-  });
+    updated_at: new Date().toISOString(),
+  }).eq('id', id);
+  if (error) throw error;
 };
 
 // Get inventory logs
 export const getInventoryLogs = async (inventoryId = null) => {
+  let query = supabase.from('inventory_logs').select('*').order('created_at', { ascending: false });
   if (inventoryId) {
-    return await db.inventoryLogs
-      .where("inventoryId")
-      .equals(inventoryId)
-      .reverse()
-      .toArray();
+    query = query.eq('inventory_id', inventoryId);
   }
-  return await db.inventoryLogs.orderBy("createdAt").reverse().toArray();
+  const { data, error } = await query;
+  if (error) throw error;
+  return data;
 };
 
 // Deduct inventory for an order (auto-deduct for Wash, Dry & Fold and add-ons)
@@ -683,36 +591,11 @@ export const getInventoryByName = async (name) => {
 
 // Reset inventory to default
 export const resetInventory = async () => {
-  await db.inventory.clear();
-  await db.inventoryLogs.clear();
-  await initializeInventory();
+  const { error } = await supabase.from('inventory').delete().neq('id', 0);
+  if (error) throw error;
+  const { error2 } = await supabase.from('inventory_logs').delete().neq('id', 0);
+  if (error2) throw error2;
   console.log("✅ Inventory reset to default");
-};
-
-// =====================
-// SYNC ALL ORDERS TO SUPABASE
-// =====================
-export const syncAllOrdersToSupabase = async () => {
-  try {
-    const orders = await db.orders.toArray();
-    let synced = 0;
-    let failed = 0;
-
-    for (const order of orders) {
-      const success = await syncOrderToSupabase(order);
-      if (success) {
-        synced++;
-      } else {
-        failed++;
-      }
-    }
-
-    console.log(`✅ Synced ${synced} orders to Supabase, ${failed} failed`);
-    return { synced, failed };
-  } catch (error) {
-    console.error("❌ Bulk sync failed:", error);
-    return { synced: 0, failed: 0, error };
-  }
 };
 
 // =====================
@@ -722,7 +605,22 @@ export const syncAllOrdersToSupabase = async () => {
 // Get all time records
 export const getTimeRecords = async () => {
   try {
-    return await db.timeRecords.toArray();
+    const { data, error } = await supabase.from('time_records').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    return data.map(record => ({
+      id: record.id,
+      staffName: record.staff_name,
+      date: record.date,
+      timeIn: record.time_in,
+      timeOut: record.time_out,
+      totalHours: record.total_hours,
+      status: record.status,
+      notes: record.notes,
+      timeInPhoto: record.time_in_photo,
+      timeOutPhoto: record.time_out_photo,
+      createdAt: record.created_at,
+      updatedAt: record.updated_at,
+    }));
   } catch (error) {
     console.error("Failed to get time records:", error);
     return [];
@@ -732,7 +630,22 @@ export const getTimeRecords = async () => {
 // Get time records for a specific date
 export const getTimeRecordsByDate = async (date) => {
   try {
-    return await db.timeRecords.where("date").equals(date).toArray();
+    const { data, error } = await supabase.from('time_records').select('*').eq('date', date);
+    if (error) throw error;
+    return data.map(record => ({
+      id: record.id,
+      staffName: record.staff_name,
+      date: record.date,
+      timeIn: record.time_in,
+      timeOut: record.time_out,
+      totalHours: record.total_hours,
+      status: record.status,
+      notes: record.notes,
+      timeInPhoto: record.time_in_photo,
+      timeOutPhoto: record.time_out_photo,
+      createdAt: record.created_at,
+      updatedAt: record.updated_at,
+    }));
   } catch (error) {
     console.error("Failed to get time records by date:", error);
     return [];
@@ -742,7 +655,22 @@ export const getTimeRecordsByDate = async (date) => {
 // Get time records for a specific staff member
 export const getTimeRecordsByStaff = async (staffName) => {
   try {
-    return await db.timeRecords.where("staffName").equals(staffName).toArray();
+    const { data, error } = await supabase.from('time_records').select('*').eq('staff_name', staffName);
+    if (error) throw error;
+    return data.map(record => ({
+      id: record.id,
+      staffName: record.staff_name,
+      date: record.date,
+      timeIn: record.time_in,
+      timeOut: record.time_out,
+      totalHours: record.total_hours,
+      status: record.status,
+      notes: record.notes,
+      timeInPhoto: record.time_in_photo,
+      timeOutPhoto: record.time_out_photo,
+      createdAt: record.created_at,
+      updatedAt: record.updated_at,
+    }));
   } catch (error) {
     console.error("Failed to get time records by staff:", error);
     return [];
@@ -753,12 +681,29 @@ export const getTimeRecordsByStaff = async (staffName) => {
 export const getActiveTimeRecord = async (staffName) => {
   try {
     const today = new Date().toISOString().split("T")[0];
-    const records = await db.timeRecords
-      .where("[staffName+date]")
-      .equals([staffName, today])
-      .and((record) => record.status === "active")
-      .toArray();
-    return records[0] || null;
+    const { data, error } = await supabase
+      .from('time_records')
+      .select('*')
+      .eq('staff_name', staffName)
+      .eq('date', today)
+      .eq('status', 'active')
+      .single();
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 is no rows
+    if (!data) return null;
+    return {
+      id: data.id,
+      staffName: data.staff_name,
+      date: data.date,
+      timeIn: data.time_in,
+      timeOut: data.time_out,
+      totalHours: data.total_hours,
+      status: data.status,
+      notes: data.notes,
+      timeInPhoto: data.time_in_photo,
+      timeOutPhoto: data.time_out_photo,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
   } catch (error) {
     console.error("Failed to get active time record:", error);
     return null;
@@ -782,23 +727,24 @@ export const clockInStaff = async (
     }
 
     const record = {
-      staffName,
+      staff_name: staffName,
       date: today,
-      timeIn: now,
-      timeOut: null,
-      totalHours: 0,
+      time_in: now,
+      time_out: null,
+      total_hours: 0,
       status: "active",
       notes,
-      timeInPhoto,
-      timeOutPhoto: null,
-      createdAt: now,
-      updatedAt: now,
+      time_in_photo: timeInPhoto,
+      time_out_photo: null,
+      created_at: now,
+      updated_at: now,
     };
 
-    const id = await db.timeRecords.add(record);
-    return { ...record, id };
+    const { data, error } = await supabase.from('time_records').insert(record).select();
+    if (error) throw error;
+    return data[0];
   } catch (error) {
-    console.error("Failed to clock in staff:", error);
+    console.error("Failed to clock in:", error);
     throw error;
   }
 };
@@ -822,17 +768,17 @@ export const clockOutStaff = async (
     const totalHours = (timeOut - timeIn) / (1000 * 60 * 60); // Convert to hours
 
     const updatedRecord = {
-      ...activeRecord,
-      timeOut: now,
-      totalHours: Math.round(totalHours * 100) / 100, // Round to 2 decimal places
+      time_out: now,
+      total_hours: Math.round(totalHours * 100) / 100, // Round to 2 decimal places
       status: "completed",
       notes: notes || activeRecord.notes,
-      timeOutPhoto,
-      updatedAt: now,
+      time_out_photo: timeOutPhoto,
+      updated_at: now,
     };
 
-    await db.timeRecords.update(activeRecord.id, updatedRecord);
-    return updatedRecord;
+    const { error } = await supabase.from('time_records').update(updatedRecord).eq('id', activeRecord.id);
+    if (error) throw error;
+    return { ...activeRecord, ...updatedRecord };
   } catch (error) {
     console.error("Failed to clock out staff:", error);
     throw error;
@@ -855,7 +801,8 @@ export const updateTimeRecordNotes = async (id, notes) => {
 // Delete time record
 export const deleteTimeRecord = async (id) => {
   try {
-    await db.timeRecords.delete(id);
+    const { error } = await supabase.from('time_records').delete().eq('id', id);
+    if (error) throw error;
   } catch (error) {
     console.error("Failed to delete time record:", error);
     throw error;
@@ -865,10 +812,27 @@ export const deleteTimeRecord = async (id) => {
 // Get time records for date range
 export const getTimeRecordsByDateRange = async (startDate, endDate) => {
   try {
-    return await db.timeRecords
-      .where("date")
-      .between(startDate, endDate, true, true)
-      .toArray();
+    const { data, error } = await supabase
+      .from('time_records')
+      .select('*')
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: false });
+    if (error) throw error;
+    return data.map(record => ({
+      id: record.id,
+      staffName: record.staff_name,
+      date: record.date,
+      timeIn: record.time_in,
+      timeOut: record.time_out,
+      totalHours: record.total_hours,
+      status: record.status,
+      notes: record.notes,
+      timeInPhoto: record.time_in_photo,
+      timeOutPhoto: record.time_out_photo,
+      createdAt: record.created_at,
+      updatedAt: record.updated_at,
+    }));
   } catch (error) {
     console.error("Failed to get time records by date range:", error);
     return [];

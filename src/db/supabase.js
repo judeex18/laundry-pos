@@ -75,7 +75,7 @@ export const syncOrderToSupabase = async (order) => {
       },
       {
         onConflict: "receipt_number",
-      }
+      },
     );
 
     if (error) {
@@ -115,7 +115,7 @@ export const updateOrderStatusInSupabase = async (receiptNumber, status) => {
 // Update order payment in Supabase
 export const updateOrderPaymentInSupabase = async (
   receiptNumber,
-  paymentData
+  paymentData,
 ) => {
   try {
     const updateData = {
