@@ -214,65 +214,79 @@ export const trackOrder = async (receiptNumber) => {
   // Clean the input
   const cleanReceiptNumber = receiptNumber.trim();
 
-  // Try exact match first
-  let { data, error } = await supabase
-    .from("orders")
-    .select("*")
-    .eq("receipt_number", cleanReceiptNumber)
-    .single();
-
-  if (error || !data) {
-    // Try case-insensitive match
-    const result = await supabase
+  try {
+    // Try exact match first (without .single() to avoid 406 errors)
+    let { data, error } = await supabase
       .from("orders")
       .select("*")
-      .ilike("receipt_number", cleanReceiptNumber);
-    data = result.data?.[0];
-  }
+      .eq("receipt_number", cleanReceiptNumber)
+      .limit(1);
 
-  if (!data) {
-    // Try partial match (last part of receipt number)
-    const parts = cleanReceiptNumber.split("-");
-    if (parts.length >= 3) {
-      const lastPart = parts[parts.length - 1];
+    if (error) {
+      console.error("Supabase query error:", error);
+      throw error;
+    }
+
+    let order = data?.[0];
+
+    if (!order) {
+      // Try case-insensitive match
       const result = await supabase
         .from("orders")
         .select("*")
-        .ilike("receipt_number", `%${lastPart}`);
-      data = result.data?.[0];
+        .ilike("receipt_number", cleanReceiptNumber)
+        .limit(1);
+      order = result.data?.[0];
     }
-  }
 
-  if (!data) {
-    // Try by ID if numeric
-    if (!isNaN(cleanReceiptNumber)) {
-      const result = await supabase
-        .from("orders")
-        .select("*")
-        .eq("id", parseInt(cleanReceiptNumber))
-        .single();
-      data = result.data;
+    if (!order) {
+      // Try partial match (last part of receipt number)
+      const parts = cleanReceiptNumber.split("-");
+      if (parts.length >= 3) {
+        const lastPart = parts[parts.length - 1];
+        const result = await supabase
+          .from("orders")
+          .select("*")
+          .ilike("receipt_number", `%${lastPart}`)
+          .limit(1);
+        order = result.data?.[0];
+      }
     }
+
+    if (!order) {
+      // Try by ID if numeric
+      if (!isNaN(cleanReceiptNumber)) {
+        const result = await supabase
+          .from("orders")
+          .select("*")
+          .eq("id", parseInt(cleanReceiptNumber))
+          .limit(1);
+        order = result.data?.[0];
+      }
+    }
+
+    if (!order) return null;
+
+    return {
+      id: order.id,
+      receiptNumber: order.receipt_number,
+      customerName: order.customer_name,
+      phone: order.phone,
+      items: order.items,
+      total: order.total,
+      paymentMethod: order.payment_method,
+      status: order.status,
+      createdAt: order.created_at,
+      gcashNumber: order.gcash_number,
+      gcashRefNumber: order.gcash_ref_number,
+      amountPaid: order.amount_paid,
+      change: order.change,
+      paidAt: order.paid_at,
+    };
+  } catch (error) {
+    console.error("Error tracking order:", error);
+    throw new Error(`Failed to track order: ${error.message}`);
   }
-
-  if (!data) return null;
-
-  return {
-    id: data.id,
-    receiptNumber: data.receipt_number,
-    customerName: data.customer_name,
-    phone: data.phone,
-    items: data.items,
-    total: data.total,
-    paymentMethod: data.payment_method,
-    status: data.status,
-    createdAt: data.created_at,
-    gcashNumber: data.gcash_number,
-    gcashRefNumber: data.gcash_ref_number,
-    amountPaid: data.amount_paid,
-    change: data.change,
-    paidAt: data.paid_at,
-  };
 };
 
 export const deleteOrder = async (id) => {
@@ -504,8 +518,8 @@ export const addStock = async (id, quantity, note = "", customerName = "") => {
     action: "add",
     quantity: quantity,
     note: note || `Added ${quantity} ${item.unit}`,
-    customerName: customerName || "",
-    createdAt: new Date().toISOString(),
+    customer_name: customerName || "",
+    created_at: new Date().toISOString(),
   });
 
   return newQuantity;

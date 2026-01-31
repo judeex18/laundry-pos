@@ -324,7 +324,7 @@ export default function Inventory() {
 
       // Filter logs by date range
       const filteredLogs = logs.filter((log) => {
-        const logDate = new Date(log.createdAt);
+        const logDate = new Date(log.created_at || log.createdAt);
         return logDate >= start && logDate <= end;
       });
 
@@ -358,9 +358,14 @@ export default function Inventory() {
     // Format data for Excel
     const excelData = logsData.map((log, index) => ({
       "No.": index + 1,
-      Date: new Date(log.createdAt).toLocaleString("en-PH"),
-      "Customer Name": log.customerName || "-",
-      Item: getItemName(log.inventoryId),
+      Date: (log.created_at
+        ? new Date(log.created_at)
+        : log.createdAt
+          ? new Date(log.createdAt)
+          : new Date()
+      ).toLocaleString("en-PH"),
+      "Customer Name": log.customer_name || log.customerName || "-",
+      Item: getItemName(log.inventory_id || log.inventoryId),
       Action: log.action === "add" ? "Added" : "Deducted",
       Qty: `${log.action === "add" ? "+" : "-"}${log.quantity}`,
       Note: log.note || "-",
@@ -457,14 +462,19 @@ export default function Inventory() {
     // Table data
     const tableData = logsData.map((log, index) => [
       index + 1,
-      new Date(log.createdAt).toLocaleString("en-PH", {
+      (log.created_at
+        ? new Date(log.created_at)
+        : log.createdAt
+          ? new Date(log.createdAt)
+          : new Date()
+      ).toLocaleString("en-PH", {
         month: "short",
         day: "numeric",
         hour: "numeric",
         minute: "2-digit",
       }),
-      log.customerName || "-",
-      getItemName(log.inventoryId),
+      log.customer_name || log.customerName || "-",
+      getItemName(log.inventory_id || log.inventoryId),
       log.action === "add" ? "Added" : "Deducted",
       `${log.action === "add" ? "+" : "-"}${log.quantity}`,
       log.note || "-",
@@ -935,13 +945,17 @@ export default function Inventory() {
                   logs.slice(0, 50).map((log) => (
                     <TableRow key={log.id}>
                       <TableCell sx={{ fontSize: "0.8rem" }}>
-                        {formatDate(log.createdAt)}
+                        {log.created_at
+                          ? new Date(log.created_at).toLocaleString()
+                          : log.createdAt
+                            ? new Date(log.createdAt).toLocaleString()
+                            : "Invalid Date"}
                       </TableCell>
                       <TableCell sx={{ fontWeight: 600, color: "#1e3a5f" }}>
-                        {log.customerName || "-"}
+                        {log.customer_name || log.customerName || "-"}
                       </TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>
-                        {getItemName(log.inventoryId)}
+                        {getItemName(log.inventory_id || log.inventoryId)}
                       </TableCell>
                       <TableCell>
                         <Chip

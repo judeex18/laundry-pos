@@ -103,9 +103,8 @@ function TrackOrder() {
       }
     } catch (error) {
       console.error("Tracking error:", error);
-      setTrackingError(
-        "Unable to connect to server. Please check your connection.",
-      );
+      console.error("Error details:", error.message);
+      setTrackingError(`Unable to connect to server: ${error.message}`);
     } finally {
       setIsTracking(false);
     }
