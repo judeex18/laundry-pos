@@ -38,7 +38,6 @@ function LandingPage({ onLogin }) {
       if (error) {
         setLoginError(error.message);
       } else {
-        localStorage.setItem("isLoggedIn", "true");
         onLogin();
       }
     } catch (error) {

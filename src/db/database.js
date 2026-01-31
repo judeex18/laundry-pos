@@ -2,7 +2,7 @@
 // Supabase Database - Online POS
 // =====================
 
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
 // Default services list
 const DEFAULT_SERVICES = [
@@ -21,9 +21,11 @@ const DEFAULT_SERVICES = [
 export const initializeServices = async () => {
   try {
     // Check if services exist
-    const { data: existing } = await supabase.from('services').select('*');
+    const { data: existing } = await supabase.from("services").select("*");
     if (existing.length === 0) {
-      const { error } = await supabase.from('services').insert(DEFAULT_SERVICES);
+      const { error } = await supabase
+        .from("services")
+        .insert(DEFAULT_SERVICES);
       if (error) throw error;
       console.log("✅ Default services initialized in Supabase");
     }
@@ -34,8 +36,8 @@ export const initializeServices = async () => {
 
 // Reset services (clears and re-adds default services)
 export const resetServices = async () => {
-  await supabase.from('services').delete().neq('id', 0); // Delete all
-  const { error } = await supabase.from('services').insert(DEFAULT_SERVICES);
+  await supabase.from("services").delete().neq("id", 0); // Delete all
+  const { error } = await supabase.from("services").insert(DEFAULT_SERVICES);
   if (error) throw error;
   console.log("✅ Services reset to default in Supabase");
 };
@@ -44,24 +46,36 @@ export const resetServices = async () => {
 // SERVICES OPERATIONS
 // =====================
 export const getServices = async () => {
-  const { data, error } = await supabase.from('services').select('*').eq('active', true);
+  const { data, error } = await supabase
+    .from("services")
+    .select("*")
+    .eq("active", true);
   if (error) throw error;
   return data;
 };
 
 export const addService = async (service) => {
-  const { data, error } = await supabase.from('services').insert({ ...service, active: true }).select();
+  const { data, error } = await supabase
+    .from("services")
+    .insert({ ...service, active: true })
+    .select();
   if (error) throw error;
   return data[0];
 };
 
 export const updateService = async (id, updates) => {
-  const { error } = await supabase.from('services').update(updates).eq('id', id);
+  const { error } = await supabase
+    .from("services")
+    .update(updates)
+    .eq("id", id);
   if (error) throw error;
 };
 
 export const deleteService = async (id) => {
-  const { error } = await supabase.from('services').update({ active: false }).eq('id', id);
+  const { error } = await supabase
+    .from("services")
+    .update({ active: false })
+    .eq("id", id);
   if (error) throw error;
 };
 
@@ -73,17 +87,25 @@ export const deleteService = async (id) => {
 const generateReceiptNumber = async () => {
   const today = new Date();
   const datePrefix = `${today.getFullYear()}${String(
-    today.getMonth() + 1
+    today.getMonth() + 1,
   ).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
 
   // Get count of orders for today from Supabase
-  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+  const startOfDay = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
+  const endOfDay = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() + 1,
+  );
   const { data: todayOrders } = await supabase
-    .from('orders')
-    .select('id')
-    .gte('created_at', startOfDay.toISOString())
-    .lt('created_at', endOfDay.toISOString());
+    .from("orders")
+    .select("id")
+    .gte("created_at", startOfDay.toISOString())
+    .lt("created_at", endOfDay.toISOString());
 
   const orderNum = String((todayOrders?.length || 0) + 1).padStart(3, "0");
   return `ORD-${datePrefix}-${orderNum}`;
@@ -103,15 +125,18 @@ export const createOrder = async (orderData) => {
     status: "Received",
     created_at: new Date().toISOString(),
   };
-  const { data, error } = await supabase.from('orders').insert(order).select();
+  const { data, error } = await supabase.from("orders").insert(order).select();
   if (error) throw error;
   return { id: data[0].id, receiptNumber };
 };
 
 export const getOrders = async () => {
-  const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .order("created_at", { ascending: false });
   if (error) throw error;
-  return data.map(order => ({
+  return data.map((order) => ({
     id: order.id,
     receiptNumber: order.receipt_number,
     customerName: order.customer_name,
@@ -127,9 +152,12 @@ export const getOrders = async () => {
 };
 
 export const getOrdersByStatus = async (status) => {
-  const { data, error } = await supabase.from('orders').select('*').eq('status', status);
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("status", status);
   if (error) throw error;
-  return data.map(order => ({
+  return data.map((order) => ({
     id: order.id,
     receiptNumber: order.receipt_number,
     customerName: order.customer_name,
@@ -149,7 +177,10 @@ export const updateOrderStatus = async (id, status) => {
   if (status === "Released") {
     updateData.released_at = new Date().toISOString();
   }
-  const { error } = await supabase.from('orders').update(updateData).eq('id', id);
+  const { error } = await supabase
+    .from("orders")
+    .update(updateData)
+    .eq("id", id);
   if (error) throw error;
 };
 
@@ -168,7 +199,10 @@ export const updateOrderPayment = async (id, paymentData) => {
     updateData.gcash_ref_number = paymentData.gcashRefNumber || null;
   }
 
-  const { error } = await supabase.from('orders').update(updateData).eq('id', id);
+  const { error } = await supabase
+    .from("orders")
+    .update(updateData)
+    .eq("id", id);
   if (error) throw error;
 };
 
@@ -176,15 +210,19 @@ export const updateOrderPayment = async (id, paymentData) => {
 export const trackOrder = async (receiptNumber) => {
   // Try exact match first
   let { data, error } = await supabase
-    .from('orders')
-    .select('*')
-    .eq('receipt_number', receiptNumber)
+    .from("orders")
+    .select("*")
+    .eq("receipt_number", receiptNumber)
     .single();
 
   if (error || !data) {
     // Try by ID if numeric
     if (!isNaN(receiptNumber)) {
-      const result = await supabase.from('orders').select('*').eq('id', parseInt(receiptNumber)).single();
+      const result = await supabase
+        .from("orders")
+        .select("*")
+        .eq("id", parseInt(receiptNumber))
+        .single();
       data = result.data;
     }
   }
@@ -210,7 +248,7 @@ export const trackOrder = async (receiptNumber) => {
 };
 
 export const deleteOrder = async (id) => {
-  const { error } = await supabase.from('orders').delete().eq('id', id);
+  const { error } = await supabase.from("orders").delete().eq("id", id);
   if (error) throw error;
 };
 
@@ -219,15 +257,23 @@ export const deleteOrder = async (id) => {
 // =====================
 export const getDailyReport = async () => {
   const today = new Date();
-  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+  const startOfDay = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
+  const endOfDay = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() + 1,
+  );
 
   const { data: orders, error } = await supabase
-    .from('orders')
-    .select('*')
-    .not('paid_at', 'is', null)
-    .gte('paid_at', startOfDay.toISOString())
-    .lt('paid_at', endOfDay.toISOString());
+    .from("orders")
+    .select("*")
+    .not("paid_at", "is", null)
+    .gte("paid_at", startOfDay.toISOString())
+    .lt("paid_at", endOfDay.toISOString());
 
   if (error) throw error;
 
@@ -247,14 +293,22 @@ export const getDailyReport = async () => {
 
 export const getOrderStats = async () => {
   const today = new Date();
-  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+  const startOfDay = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
+  const endOfDay = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() + 1,
+  );
 
   const { data: orders, error } = await supabase
-    .from('orders')
-    .select('status')
-    .gte('created_at', startOfDay.toISOString())
-    .lt('created_at', endOfDay.toISOString());
+    .from("orders")
+    .select("status")
+    .gte("created_at", startOfDay.toISOString())
+    .lt("created_at", endOfDay.toISOString());
 
   if (error) throw error;
 
@@ -282,15 +336,15 @@ export const getOrderStats = async () => {
 // =====================
 export const getOrdersForExport = async (startDate, endDate) => {
   const { data: orders, error } = await supabase
-    .from('orders')
-    .select('*')
-    .not('paid_at', 'is', null)
-    .gte('paid_at', startDate.toISOString())
-    .lte('paid_at', endDate.toISOString());
+    .from("orders")
+    .select("*")
+    .not("paid_at", "is", null)
+    .gte("paid_at", startDate.toISOString())
+    .lte("paid_at", endDate.toISOString());
 
   if (error) throw error;
 
-  return orders.map(order => ({
+  return orders.map((order) => ({
     id: order.id,
     receiptNumber: order.receipt_number,
     customerName: order.customer_name,
@@ -326,7 +380,7 @@ export const getMonthlyOrdersForExport = async () => {
     0,
     23,
     59,
-    59
+    59,
   );
 
   return await getOrdersForExport(startOfMonth, endOfMonth);
@@ -336,13 +390,13 @@ export const getMonthlyOrdersForExport = async () => {
 // CLEAR DATA (for testing)
 // =====================
 export const clearAllOrders = async () => {
-  const { error } = await supabase.from('orders').delete().neq('id', 0);
+  const { error } = await supabase.from("orders").delete().neq("id", 0);
   if (error) throw error;
 };
 
 export const clearInventory = async () => {
-  await supabase.from('inventory').delete().neq('id', 0);
-  await supabase.from('inventory_logs').delete().neq('id', 0);
+  await supabase.from("inventory").delete().neq("id", 0);
+  await supabase.from("inventory_logs").delete().neq("id", 0);
   return true;
 };
 
@@ -358,21 +412,31 @@ export const resetDatabase = async () => {
 
 // Get all inventory items
 export const getInventory = async () => {
-  const { data, error } = await supabase.from('inventory').select('*').order('created_at', { ascending: false });
+  const { data, error } = await supabase
+    .from("inventory")
+    .select("*")
+    .order("created_at", { ascending: false });
   if (error) throw error;
   return data;
 };
 
 // Get inventory by type (e.g., 'downy')
 export const getInventoryByType = async (type) => {
-  const { data, error } = await supabase.from('inventory').select('*').eq('type', type);
+  const { data, error } = await supabase
+    .from("inventory")
+    .select("*")
+    .eq("type", type);
   if (error) throw error;
   return data;
 };
 
 // Get single inventory item
 export const getInventoryItem = async (id) => {
-  const { data, error } = await supabase.from('inventory').select('*').eq('id', id).single();
+  const { data, error } = await supabase
+    .from("inventory")
+    .select("*")
+    .eq("id", id)
+    .single();
   if (error) throw error;
   return data;
 };
@@ -388,14 +452,17 @@ export const addInventoryItem = async (name, type, quantity, unit) => {
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase.from('inventory').insert(newItem).select();
+  const { data, error } = await supabase
+    .from("inventory")
+    .insert(newItem)
+    .select();
   if (error) throw error;
 
   const item = data[0];
 
   // Log the initial stock if quantity > 0
   if (quantity > 0) {
-    await supabase.from('inventory_logs').insert({
+    await supabase.from("inventory_logs").insert({
       inventory_id: item.id,
       action: "add",
       quantity: quantity,
@@ -414,14 +481,17 @@ export const addStock = async (id, quantity, note = "", customerName = "") => {
   if (!item) throw new Error("Inventory item not found");
 
   const newQuantity = item.quantity + quantity;
-  const { error } = await supabase.from('inventory').update({
-    quantity: newQuantity,
-    updated_at: new Date().toISOString(),
-  }).eq('id', id);
+  const { error } = await supabase
+    .from("inventory")
+    .update({
+      quantity: newQuantity,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
   if (error) throw error;
 
   // Log the action
-  await supabase.from('inventory_logs').insert({
+  await supabase.from("inventory_logs").insert({
     inventory_id: id,
     action: "add",
     quantity: quantity,
@@ -438,20 +508,23 @@ export const deductStock = async (
   id,
   quantity,
   note = "",
-  customerName = ""
+  customerName = "",
 ) => {
   const item = await getInventoryItem(id);
   if (!item) throw new Error("Inventory item not found");
 
   const newQuantity = Math.max(0, item.quantity - quantity);
-  const { error } = await supabase.from('inventory').update({
-    quantity: newQuantity,
-    updated_at: new Date().toISOString(),
-  }).eq('id', id);
+  const { error } = await supabase
+    .from("inventory")
+    .update({
+      quantity: newQuantity,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
   if (error) throw error;
 
   // Log the action
-  await supabase.from('inventory_logs').insert({
+  await supabase.from("inventory_logs").insert({
     inventory_id: id,
     action: "deduct",
     quantity: quantity,
@@ -465,18 +538,24 @@ export const deductStock = async (
 
 // Update inventory item quantity directly
 export const updateInventoryQuantity = async (id, quantity) => {
-  const { error } = await supabase.from('inventory').update({
-    quantity: quantity,
-    updated_at: new Date().toISOString(),
-  }).eq('id', id);
+  const { error } = await supabase
+    .from("inventory")
+    .update({
+      quantity: quantity,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
   if (error) throw error;
 };
 
 // Get inventory logs
 export const getInventoryLogs = async (inventoryId = null) => {
-  let query = supabase.from('inventory_logs').select('*').order('created_at', { ascending: false });
+  let query = supabase
+    .from("inventory_logs")
+    .select("*")
+    .order("created_at", { ascending: false });
   if (inventoryId) {
-    query = query.eq('inventory_id', inventoryId);
+    query = query.eq("inventory_id", inventoryId);
   }
   const { data, error } = await query;
   if (error) throw error;
@@ -487,7 +566,7 @@ export const getInventoryLogs = async (inventoryId = null) => {
 export const deductInventoryForOrder = async (
   items,
   selectedDownyId,
-  customerName = ""
+  customerName = "",
 ) => {
   const inventory = await getInventory();
 
@@ -507,7 +586,7 @@ export const deductInventoryForOrder = async (
           detergent.id,
           item.loads,
           `Order: ${item.loads}x Wash, Dry & Fold`,
-          customerName
+          customerName,
         );
       }
 
@@ -517,7 +596,7 @@ export const deductInventoryForOrder = async (
           selectedDownyId,
           item.loads,
           `Order: ${item.loads}x Wash, Dry & Fold`,
-          customerName
+          customerName,
         );
       }
     }
@@ -534,7 +613,7 @@ export const deductInventoryForOrder = async (
           targetDowny.id,
           item.loads,
           `Add-on: ${item.loads}x Downy`,
-          customerName
+          customerName,
         );
       }
     }
@@ -547,7 +626,7 @@ export const deductInventoryForOrder = async (
           detergent.id,
           item.loads,
           `Add-on: ${item.loads}x Liquid Detergent`,
-          customerName
+          customerName,
         );
       }
     }
@@ -558,7 +637,7 @@ export const deductInventoryForOrder = async (
 export const deductAddOnFromInventory = async (
   serviceName,
   quantity = 1,
-  customerName = ""
+  customerName = "",
 ) => {
   const inventory = await getInventory();
   const name = serviceName.toLowerCase();
@@ -575,7 +654,7 @@ export const deductAddOnFromInventory = async (
         detergent.id,
         quantity,
         `POS Add-on: Liquid Detergent`,
-        customerName
+        customerName,
       );
     }
   }
@@ -591,9 +670,12 @@ export const getInventoryByName = async (name) => {
 
 // Reset inventory to default
 export const resetInventory = async () => {
-  const { error } = await supabase.from('inventory').delete().neq('id', 0);
+  const { error } = await supabase.from("inventory").delete().neq("id", 0);
   if (error) throw error;
-  const { error2 } = await supabase.from('inventory_logs').delete().neq('id', 0);
+  const { error2 } = await supabase
+    .from("inventory_logs")
+    .delete()
+    .neq("id", 0);
   if (error2) throw error2;
   console.log("✅ Inventory reset to default");
 };
@@ -605,9 +687,12 @@ export const resetInventory = async () => {
 // Get all time records
 export const getTimeRecords = async () => {
   try {
-    const { data, error } = await supabase.from('time_records').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from("time_records")
+      .select("*")
+      .order("created_at", { ascending: false });
     if (error) throw error;
-    return data.map(record => ({
+    return data.map((record) => ({
       id: record.id,
       staffName: record.staff_name,
       date: record.date,
@@ -630,9 +715,12 @@ export const getTimeRecords = async () => {
 // Get time records for a specific date
 export const getTimeRecordsByDate = async (date) => {
   try {
-    const { data, error } = await supabase.from('time_records').select('*').eq('date', date);
+    const { data, error } = await supabase
+      .from("time_records")
+      .select("*")
+      .eq("date", date);
     if (error) throw error;
-    return data.map(record => ({
+    return data.map((record) => ({
       id: record.id,
       staffName: record.staff_name,
       date: record.date,
@@ -655,9 +743,12 @@ export const getTimeRecordsByDate = async (date) => {
 // Get time records for a specific staff member
 export const getTimeRecordsByStaff = async (staffName) => {
   try {
-    const { data, error } = await supabase.from('time_records').select('*').eq('staff_name', staffName);
+    const { data, error } = await supabase
+      .from("time_records")
+      .select("*")
+      .eq("staff_name", staffName);
     if (error) throw error;
-    return data.map(record => ({
+    return data.map((record) => ({
       id: record.id,
       staffName: record.staff_name,
       date: record.date,
@@ -682,13 +773,13 @@ export const getActiveTimeRecord = async (staffName) => {
   try {
     const today = new Date().toISOString().split("T")[0];
     const { data, error } = await supabase
-      .from('time_records')
-      .select('*')
-      .eq('staff_name', staffName)
-      .eq('date', today)
-      .eq('status', 'active')
+      .from("time_records")
+      .select("*")
+      .eq("staff_name", staffName)
+      .eq("date", today)
+      .eq("status", "active")
       .single();
-    if (error && error.code !== 'PGRST116') throw error; // PGRST116 is no rows
+    if (error && error.code !== "PGRST116") throw error; // PGRST116 is no rows
     if (!data) return null;
     return {
       id: data.id,
@@ -714,7 +805,7 @@ export const getActiveTimeRecord = async (staffName) => {
 export const clockInStaff = async (
   staffName,
   notes = "",
-  timeInPhoto = null
+  timeInPhoto = null,
 ) => {
   try {
     const today = new Date().toISOString().split("T")[0];
@@ -740,7 +831,10 @@ export const clockInStaff = async (
       updated_at: now,
     };
 
-    const { data, error } = await supabase.from('time_records').insert(record).select();
+    const { data, error } = await supabase
+      .from("time_records")
+      .insert(record)
+      .select();
     if (error) throw error;
     return data[0];
   } catch (error) {
@@ -753,7 +847,7 @@ export const clockInStaff = async (
 export const clockOutStaff = async (
   staffName,
   notes = "",
-  timeOutPhoto = null
+  timeOutPhoto = null,
 ) => {
   try {
     const now = new Date().toISOString();
@@ -776,7 +870,10 @@ export const clockOutStaff = async (
       updated_at: now,
     };
 
-    const { error } = await supabase.from('time_records').update(updatedRecord).eq('id', activeRecord.id);
+    const { error } = await supabase
+      .from("time_records")
+      .update(updatedRecord)
+      .eq("id", activeRecord.id);
     if (error) throw error;
     return { ...activeRecord, ...updatedRecord };
   } catch (error) {
@@ -801,7 +898,7 @@ export const updateTimeRecordNotes = async (id, notes) => {
 // Delete time record
 export const deleteTimeRecord = async (id) => {
   try {
-    const { error } = await supabase.from('time_records').delete().eq('id', id);
+    const { error } = await supabase.from("time_records").delete().eq("id", id);
     if (error) throw error;
   } catch (error) {
     console.error("Failed to delete time record:", error);
@@ -813,13 +910,13 @@ export const deleteTimeRecord = async (id) => {
 export const getTimeRecordsByDateRange = async (startDate, endDate) => {
   try {
     const { data, error } = await supabase
-      .from('time_records')
-      .select('*')
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .order('date', { ascending: false });
+      .from("time_records")
+      .select("*")
+      .gte("date", startDate)
+      .lte("date", endDate)
+      .order("date", { ascending: false });
     if (error) throw error;
-    return data.map(record => ({
+    return data.map((record) => ({
       id: record.id,
       staffName: record.staff_name,
       date: record.date,
