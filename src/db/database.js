@@ -849,6 +849,7 @@ export const clockInStaff = async (
 ) => {
   try {
     const today = new Date().toISOString().split("T")[0];
+    // Store UTC time - display function will convert to local Manila time
     const now = new Date().toISOString();
 
     // Check if already clocked in

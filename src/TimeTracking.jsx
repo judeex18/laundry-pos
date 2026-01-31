@@ -67,7 +67,7 @@ export default function TimeTracking() {
   const [timeRecords, setTimeRecords] = useState([]);
   const [activeTab, setActiveTab] = useState(0);
   const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
+    new Date().toISOString().split("T")[0],
   );
   const [clockInDialog, setClockInDialog] = useState({
     open: false,
@@ -186,7 +186,7 @@ export default function TimeTracking() {
     try {
       await updateTimeRecordNotes(
         editNotesDialog.record.id,
-        editNotesDialog.notes
+        editNotesDialog.notes,
       );
       await loadTimeRecords();
       setEditNotesDialog({ open: false, record: null, notes: "" });
@@ -224,7 +224,7 @@ export default function TimeTracking() {
       console.error("Error accessing camera:", error);
       showSnackbar(
         "Unable to access camera. Please check permissions.",
-        "error"
+        "error",
       );
     }
   };
@@ -267,21 +267,21 @@ export default function TimeTracking() {
         await clockInStaff(
           cameraDialog.staffName,
           "",
-          cameraDialog.capturedPhoto
+          cameraDialog.capturedPhoto,
         );
         showSnackbar(
           `${cameraDialog.staffName} clocked in successfully`,
-          "success"
+          "success",
         );
       } else {
         await clockOutStaff(
           cameraDialog.staffName,
           "",
-          cameraDialog.capturedPhoto
+          cameraDialog.capturedPhoto,
         );
         showSnackbar(
           `${cameraDialog.staffName} clocked out successfully`,
-          "success"
+          "success",
         );
       }
 
@@ -357,7 +357,7 @@ export default function TimeTracking() {
     const completedRecords = records.filter((r) => r.status === "completed");
     const totalHours = completedRecords.reduce(
       (sum, r) => sum + (r.totalHours || 0),
-      0
+      0,
     );
     const totalDays = new Set(records.map((r) => r.date)).size;
 
@@ -366,11 +366,11 @@ export default function TimeTracking() {
     doc.setTextColor(100, 100, 100);
     doc.text(
       `Total Days: ${totalDays} | Total Hours: ${totalHours.toFixed(
-        2
+        2,
       )} | Completed Records: ${completedRecords.length}`,
       105,
       42,
-      { align: "center" }
+      { align: "center" },
     );
 
     // Table data
@@ -475,11 +475,11 @@ export default function TimeTracking() {
     doc.setTextColor(100, 100, 100);
     doc.text(
       `Date Range: ${new Date(startDate).toLocaleDateString()} - ${new Date(
-        endDate
+        endDate,
       ).toLocaleDateString()}`,
       105,
       34,
-      { align: "center" }
+      { align: "center" },
     );
 
     let currentY = 42;
@@ -490,7 +490,7 @@ export default function TimeTracking() {
         (record) =>
           record.staffName === staffName &&
           record.date >= startDate &&
-          record.date <= endDate
+          record.date <= endDate,
       );
 
       if (staffRecords.length === 0) continue;
@@ -503,11 +503,11 @@ export default function TimeTracking() {
 
       // Calculate summary
       const completedRecords = staffRecords.filter(
-        (r) => r.status === "completed"
+        (r) => r.status === "completed",
       );
       const totalHours = completedRecords.reduce(
         (sum, r) => sum + (r.totalHours || 0),
-        0
+        0,
       );
 
       doc.setFontSize(9);
@@ -517,7 +517,7 @@ export default function TimeTracking() {
           completedRecords.length
         }`,
         14,
-        currentY
+        currentY,
       );
       currentY += 8;
 
@@ -592,7 +592,7 @@ export default function TimeTracking() {
   const handleExportIndividual = async (staffName) => {
     try {
       const staffRecords = timeRecords.filter(
-        (record) => record.staffName === staffName
+        (record) => record.staffName === staffName,
       );
       if (staffRecords.length === 0) {
         showSnackbar(`No records found for ${staffName}`, "warning");
@@ -616,7 +616,7 @@ export default function TimeTracking() {
       await exportMultipleStaffPDF(
         exportDialog.selectedStaff,
         exportDialog.dateRange.start,
-        exportDialog.dateRange.end
+        exportDialog.dateRange.end,
       );
       setExportDialog({ ...exportDialog, open: false, selectedStaff: [] });
       showSnackbar("PDF exported successfully", "success");
@@ -628,10 +628,15 @@ export default function TimeTracking() {
 
   const formatTime = (dateString) => {
     if (!dateString) return "-";
-    return new Date(dateString).toLocaleTimeString("en-US", {
+    // Ensure UTC time is properly converted to local time
+    const utcDate = new Date(
+      dateString + (dateString.includes("Z") ? "" : "Z"),
+    );
+    return utcDate.toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
+      timeZone: "Asia/Manila", // Explicitly set timezone
     });
   };
 
@@ -1187,7 +1192,7 @@ export default function TimeTracking() {
                         setExportDialog({
                           ...exportDialog,
                           selectedStaff: exportDialog.selectedStaff.filter(
-                            (s) => s !== staff
+                            (s) => s !== staff,
                           ),
                         });
                       }
