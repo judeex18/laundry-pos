@@ -93,23 +93,7 @@ function TrackOrder() {
     setTrackingResult(null);
 
     try {
-      console.log("Searching for receipt number:", receiptNumber.trim());
-
-      // First, let's check if there are any orders at all
-      const { data: allOrders, error: countError } = await supabase
-        .from("orders")
-        .select("id, receipt_number")
-        .limit(5);
-
-      console.log(
-        "Sample orders in database:",
-        allOrders,
-        "Count error:",
-        countError,
-      );
-
       const result = await trackOrder(receiptNumber.trim());
-      console.log("Search result:", result);
 
       if (result) {
         setTrackingResult(result);
