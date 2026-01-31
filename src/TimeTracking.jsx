@@ -40,7 +40,6 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import PersonIcon from "@mui/icons-material/Person";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import StopIcon from "@mui/icons-material/Stop";
-import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
@@ -55,7 +54,6 @@ import {
   getActiveTimeRecord,
   clockInStaff,
   clockOutStaff,
-  updateTimeRecordNotes,
   deleteTimeRecord,
   getStaffAttendanceSummary,
 } from "./db/database";
@@ -76,11 +74,6 @@ export default function TimeTracking() {
   const [clockOutDialog, setClockOutDialog] = useState({
     open: false,
     record: null,
-  });
-  const [editNotesDialog, setEditNotesDialog] = useState({
-    open: false,
-    record: null,
-    notes: "",
   });
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -195,20 +188,6 @@ export default function TimeTracking() {
       stream: null,
       capturedPhoto: null,
     });
-  };
-
-  const handleEditNotes = async () => {
-    try {
-      await updateTimeRecordNotes(
-        editNotesDialog.record.id,
-        editNotesDialog.notes,
-      );
-      await loadTimeRecords();
-      setEditNotesDialog({ open: false, record: null, notes: "" });
-      showSnackbar("Notes updated successfully", "success");
-    } catch (error) {
-      showSnackbar("Failed to update notes", "error");
-    }
   };
 
   const handleDeleteRecord = async (record) => {
@@ -914,20 +893,6 @@ export default function TimeTracking() {
                               </IconButton>
                             </Tooltip>
                           )}
-                          <Tooltip title="Edit Notes">
-                            <IconButton
-                              size="small"
-                              onClick={() =>
-                                setEditNotesDialog({
-                                  open: true,
-                                  record,
-                                  notes: record.notes || "",
-                                })
-                              }
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
                           <Tooltip title="Delete Record">
                             <IconButton
                               size="small"
@@ -1088,45 +1053,6 @@ export default function TimeTracking() {
           </Button>
           <Button onClick={handleClockOut} variant="contained" color="error">
             Clock Out
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Edit Notes Dialog */}
-      <Dialog
-        open={editNotesDialog.open}
-        onClose={() =>
-          setEditNotesDialog({ open: false, record: null, notes: "" })
-        }
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Edit Notes</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Notes"
-            fullWidth
-            multiline
-            rows={3}
-            variant="outlined"
-            value={editNotesDialog.notes}
-            onChange={(e) =>
-              setEditNotesDialog({ ...editNotesDialog, notes: e.target.value })
-            }
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() =>
-              setEditNotesDialog({ open: false, record: null, notes: "" })
-            }
-          >
-            Cancel
-          </Button>
-          <Button onClick={handleEditNotes} variant="contained">
-            Save
           </Button>
         </DialogActions>
       </Dialog>
