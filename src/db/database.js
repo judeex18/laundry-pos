@@ -90,11 +90,15 @@ const generateReceiptNumber = async () => {
     today.getMonth() + 1,
   ).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
 
+  console.log("Generating receipt for date prefix:", datePrefix);
+
   // Get count of orders for today from Supabase with the same date prefix
-  const { data: todayOrders } = await supabase
+  const { data: todayOrders, error } = await supabase
     .from("orders")
     .select("receipt_number")
     .ilike("receipt_number", `ORD-${datePrefix}-%`);
+
+  console.log("Existing orders with prefix:", todayOrders, "Error:", error);
 
   // Extract the highest number from existing receipts
   let maxNumber = 0;
@@ -111,11 +115,16 @@ const generateReceiptNumber = async () => {
   }
 
   const orderNum = String(maxNumber + 1).padStart(3, "0");
-  return `ORD-${datePrefix}-${orderNum}`;
+  const receiptNumber = `ORD-${datePrefix}-${orderNum}`;
+  console.log("Generated receipt number:", receiptNumber);
+  return receiptNumber;
 };
 
 export const createOrder = async (orderData) => {
+  console.log("Creating order with data:", orderData);
   const receiptNumber = await generateReceiptNumber();
+  console.log("Generated receipt number:", receiptNumber);
+
   const order = {
     receipt_number: receiptNumber,
     customer_name: orderData.customer,
@@ -128,8 +137,17 @@ export const createOrder = async (orderData) => {
     status: "Received",
     created_at: new Date().toISOString(),
   };
+
+  console.log("Order object to insert:", order);
   const { data, error } = await supabase.from("orders").insert(order).select();
-  if (error) throw error;
+  console.log("Supabase insert result:", { data, error });
+
+  if (error) {
+    console.error("Supabase insert error:", error);
+    throw error;
+  }
+
+  console.log("Order created successfully:", data[0]);
   return { id: data[0].id, receiptNumber };
 };
 

@@ -31,6 +31,7 @@ import WbSunnyIcon from "@mui/icons-material/WbSunny";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import CelebrationIcon from "@mui/icons-material/Celebration";
 import { trackOrder } from "./db/database";
+import { supabase } from "./db/supabase";
 
 // Status configuration for tracking
 const statusSteps = ["Received", "Washing", "Drying", "Ready", "Released"];
@@ -93,6 +94,20 @@ function TrackOrder() {
 
     try {
       console.log("Searching for receipt number:", receiptNumber.trim());
+
+      // First, let's check if there are any orders at all
+      const { data: allOrders, error: countError } = await supabase
+        .from("orders")
+        .select("id, receipt_number")
+        .limit(5);
+
+      console.log(
+        "Sample orders in database:",
+        allOrders,
+        "Count error:",
+        countError,
+      );
+
       const result = await trackOrder(receiptNumber.trim());
       console.log("Search result:", result);
 
