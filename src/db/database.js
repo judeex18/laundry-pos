@@ -1023,8 +1023,17 @@ export const getTimeRecordsByDateRange = async (startDate, endDate) => {
 export const getStaffAttendanceSummary = async (startDate, endDate) => {
   try {
     console.log(`Getting attendance summary from ${startDate} to ${endDate}`);
-    const records = await getTimeRecordsByDateRange(startDate, endDate);
-    console.log(`Found ${records.length} records in date range:`, records);
+    const allRecords = await getTimeRecordsByDateRange(startDate, endDate);
+    console.log(
+      `Found ${allRecords.length} records in date range:`,
+      allRecords,
+    );
+
+    // Filter only completed records
+    const records = allRecords.filter(
+      (record) => record.status === "completed",
+    );
+    console.log(`Filtered to ${records.length} completed records:`, records);
 
     const summary = {};
 
