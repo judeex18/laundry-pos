@@ -130,14 +130,29 @@ export default function TimeTracking() {
   const loadAttendanceSummary = async () => {
     try {
       const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      // Create dates in UTC to avoid timezone conversion issues
+      const startOfMonth = new Date(
+        Date.UTC(now.getFullYear(), now.getMonth(), 1),
+      )
         .toISOString()
         .split("T")[0];
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      const endOfMonth = new Date(
+        Date.UTC(now.getFullYear(), now.getMonth() + 1, 0),
+      )
         .toISOString()
         .split("T")[0];
 
+      console.log(
+        `Loading attendance summary for ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`,
+      );
+      console.log(`Date range: ${startOfMonth} to ${endOfMonth}`);
+
+      // Also check all time records
+      const allRecords = await getTimeRecords();
+      console.log(`All time records in database:`, allRecords);
+
       const summary = await getStaffAttendanceSummary(startOfMonth, endOfMonth);
+      console.log(`Attendance summary result:`, summary);
       setAttendanceSummary(summary);
     } catch (error) {
       console.error("Failed to load attendance summary:", error);
@@ -667,10 +682,10 @@ export default function TimeTracking() {
       <Typography
         variant="h4"
         gutterBottom
-        sx={{ fontWeight: 700, color: "#375da5", mb: 3 }}
+        sx={{ fontWeight: 700, color: "#FFFFFF", mb: 3 }}
       >
         <AccessTimeIcon sx={{ mr: 2, verticalAlign: "middle" }} />
-        Staff Time Tracking
+        Daily Time Record
       </Typography>
 
       {/* Quick Actions */}

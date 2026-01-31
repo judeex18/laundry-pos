@@ -898,7 +898,9 @@ export const clockOutStaff = async (
       throw new Error(`${staffName} is not clocked in`);
     }
 
-    const timeIn = new Date(activeRecord.timeIn);
+    const timeIn = new Date(
+      activeRecord.timeIn + (activeRecord.timeIn.includes("Z") ? "" : "Z"),
+    );
     const timeOut = new Date(now);
     const totalHours = (timeOut - timeIn) / (1000 * 60 * 60); // Convert to hours
 
@@ -950,13 +952,53 @@ export const deleteTimeRecord = async (id) => {
 // Get time records for date range
 export const getTimeRecordsByDateRange = async (startDate, endDate) => {
   try {
+    console.log(`Querying time records from ${startDate} to ${endDate}`);
+
+    // Try the Supabase query first
     const { data, error } = await supabase
       .from("time_records")
       .select("*")
       .gte("date", startDate)
       .lte("date", endDate)
       .order("date", { ascending: false });
-    if (error) throw error;
+
+    console.log(`Supabase query result:`, { data, error });
+
+    if (error) {
+      console.error("Supabase query error:", error);
+      // Fallback: get all records and filter in JavaScript
+      console.log("Trying fallback query...");
+      const { data: allData, error: allError } = await supabase
+        .from("time_records")
+        .select("*")
+        .order("date", { ascending: false });
+
+      if (allError) throw allError;
+
+      const filteredData = allData.filter((record) => {
+        const recordDate = record.date;
+        return recordDate >= startDate && recordDate <= endDate;
+      });
+
+      console.log(
+        `Fallback filtered ${filteredData.length} records from ${allData.length} total`,
+      );
+      return filteredData.map((record) => ({
+        id: record.id,
+        staffName: record.staff_name,
+        date: record.date,
+        timeIn: record.time_in,
+        timeOut: record.time_out,
+        totalHours: record.total_hours,
+        status: record.status,
+        notes: record.notes,
+        timeInPhoto: record.time_in_photo,
+        timeOutPhoto: record.time_out_photo,
+        createdAt: record.created_at,
+        updatedAt: record.updated_at,
+      }));
+    }
+
     return data.map((record) => ({
       id: record.id,
       staffName: record.staff_name,
@@ -980,10 +1022,16 @@ export const getTimeRecordsByDateRange = async (startDate, endDate) => {
 // Get staff attendance summary
 export const getStaffAttendanceSummary = async (startDate, endDate) => {
   try {
+    console.log(`Getting attendance summary from ${startDate} to ${endDate}`);
     const records = await getTimeRecordsByDateRange(startDate, endDate);
+    console.log(`Found ${records.length} records in date range:`, records);
+
     const summary = {};
 
     records.forEach((record) => {
+      console.log(
+        `Processing record: ${record.staffName}, date: ${record.date}, status: ${record.status}, hours: ${record.totalHours}`,
+      );
       if (!summary[record.staffName]) {
         summary[record.staffName] = {
           staffName: record.staffName,
@@ -1000,6 +1048,7 @@ export const getStaffAttendanceSummary = async (startDate, endDate) => {
       }
     });
 
+    console.log(`Final summary:`, summary);
     return Object.values(summary);
   } catch (error) {
     console.error("Failed to get staff attendance summary:", error);
