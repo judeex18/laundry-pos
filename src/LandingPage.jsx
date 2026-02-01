@@ -15,7 +15,6 @@ import LockIcon from "@mui/icons-material/Lock";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
-import HomeIcon from "@mui/icons-material/Home";
 import { supabase } from "./db/supabase";
 
 function LandingPage({ onLogin }) {
@@ -43,10 +42,6 @@ function LandingPage({ onLogin }) {
     } catch (error) {
       setLoginError("Login failed");
     }
-  };
-
-  const goToTracker = () => {
-    window.location.href = "/";
   };
 
   return (
@@ -194,20 +189,9 @@ function LandingPage({ onLogin }) {
               variant="contained"
               type="submit"
               size="large"
-              sx={{ py: 1.5, mb: 2 }}
-            >
-              Login
-            </Button>
-
-            <Button
-              fullWidth
-              variant="outlined"
-              size="large"
-              startIcon={<HomeIcon />}
-              onClick={goToTracker}
               sx={{ py: 1.5 }}
             >
-              Back to Order Tracker
+              Login
             </Button>
           </form>
         </Paper>

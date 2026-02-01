@@ -22,7 +22,6 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import DryCleaningIcon from "@mui/icons-material/DryCleaning";
 import IronIcon from "@mui/icons-material/Iron";
-import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import PersonIcon from "@mui/icons-material/Person";
 import PhoneIcon from "@mui/icons-material/Phone";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
@@ -112,10 +111,6 @@ function TrackOrder() {
   const getProgress = (status) => {
     const index = statusSteps.indexOf(status);
     return ((index + 1) / statusSteps.length) * 100;
-  };
-
-  const goToAdmin = () => {
-    window.location.href = "/admin";
   };
 
   const formatDate = (dateStr) => {
@@ -696,26 +691,6 @@ function TrackOrder() {
             </Paper>
           </Fade>
         )}
-
-        {/* Admin Link - Small and subtle */}
-        <Box sx={{ textAlign: "center", mt: 4 }}>
-          <Button
-            variant="text"
-            size="small"
-            startIcon={<AdminPanelSettingsIcon />}
-            onClick={goToAdmin}
-            sx={{
-              color: "rgba(255,255,255,0.6)",
-              fontSize: "0.75rem",
-              "&:hover": {
-                color: "white",
-                bgcolor: "rgba(255,255,255,0.1)",
-              },
-            }}
-          >
-            Staff Login
-          </Button>
-        </Box>
 
         {/* Footer */}
         <Box
