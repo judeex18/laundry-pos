@@ -1,0 +1,24 @@
+{
+  "name": "Ian's Laundry Hub - Track Order",
+  "short_name": "Track Order",
+  "description": "Track your laundry order status",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#375da5",
+  "theme_color": "#375da5",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/IansLogo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/IansLogo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

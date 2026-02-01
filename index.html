@@ -1,10 +1,36 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/IansLogo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="apple-touch-icon" href="/IansLogo.png" />
     <title>Ian's Laundry Hub</title>
+
+    <script>
+      // Dynamically load the correct manifest based on the URL
+      const isAdmin = window.location.pathname.startsWith("/admin");
+      const manifestPath = isAdmin
+        ? "/manifest-admin.json"
+        : "/manifest-customer.json";
+      const manifestLink = document.createElement("link");
+      manifestLink.rel = "manifest";
+      manifestLink.href = manifestPath;
+      document.head.appendChild(manifestLink);
+
+      // Update page title
+      document.title = isAdmin
+        ? "Ian's Laundry Hub - POS"
+        : "Ian's Laundry Hub - Track Order";
+
+      // Update theme color
+      const themeColor = document.createElement("meta");
+      themeColor.name = "theme-color";
+      themeColor.content = isAdmin ? "#1e3a5f" : "#375da5";
+      document.head.appendChild(themeColor);
+    </script>
   </head>
   <body>
     <div id="root"></div>
