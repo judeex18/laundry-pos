@@ -4,8 +4,15 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-// Supabase project credentials
-const SUPABASE_URL = "https://gyzrddwuctcsldrvdgfb.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_kTWfDaA7a3WUqkhgVE1q0w_HFTO_z1g";
+// Supabase project credentials from environment variables
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Validate environment variables
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error(
+    "Missing Supabase environment variables. Please check your .env file.",
+  );
+}
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
