@@ -89,7 +89,11 @@ export default function ReceiptPreview({
     y += 4;
 
     // Receipt Info
+    doc.setFont(undefined, "bold");
+    doc.setFontSize(8);
     doc.text(`Receipt #: ${data.receiptNumber || "-"}`, 2, y);
+    doc.setFontSize(7);
+    doc.setFont(undefined, "normal");
     y += 3.5;
     doc.text(`Customer: ${data.customer ? data.customer : "-"}`, 2, y);
     y += 3.5;
@@ -191,10 +195,12 @@ export default function ReceiptPreview({
 
     // Footer
     doc.setFont(undefined, "bold");
-    doc.text("Thank you for your business!", 28.5, y, { align: "center" });
+    doc.text("Thank you for choosing", 28.5, y, { align: "center" });
+    y += 3.5;
+    doc.text("Ian's Laundry Hub!", 28.5, y, { align: "center" });
     y += 3.5;
     doc.setFont(undefined, "normal");
-    doc.text("Please come again!", 28.5, y, { align: "center" });
+    doc.text("Please drop with us again!", 28.5, y, { align: "center" });
 
     doc.save(`receipt_${data.receiptNumber || "order"}.pdf`);
   };
@@ -272,7 +278,7 @@ export default function ReceiptPreview({
           <div class="center" style="font-size: 7px;">================================</div>
           
           <div class="left">
-            Receipt #: ${data.receiptNumber || "-"}<br>
+            <strong style="font-size: 10px;">Receipt #: ${data.receiptNumber || "-"}</strong><br>
             Customer: ${data.customer || "-"}<br>
             Phone: ${data.phone || "-"}<br>
             Date: ${data.date || new Date().toLocaleString()}
@@ -836,7 +842,17 @@ export default function ReceiptPreview({
                   value={amountPaid}
                   onChange={(e) => setAmountPaid(e.target.value)}
                   placeholder={`Min: ₱${Number(data.total).toFixed(2)}`}
-                  sx={{ mb: 2 }}
+                  sx={{
+                    mb: 2,
+                    "& input[type=number]": {
+                      MozAppearance: "textfield",
+                    },
+                    "& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button":
+                      {
+                        WebkitAppearance: "none",
+                        margin: 0,
+                      },
+                  }}
                   InputProps={{
                     startAdornment: (
                       <Typography sx={{ mr: 1, color: "text.secondary" }}>
