@@ -456,13 +456,13 @@ export default function POS() {
                 </Box>
               </Box>
 
-              <Grid container spacing={{ xs: 1, sm: 2 }}>
+              <Grid container spacing={{ xs: 1.5, sm: 2 }}>
                 {services.map((service, index) => {
                   const itemInCart = items.find((i) => i.id === service.id);
                   const loads = itemInCart ? itemInCart.loads : 0;
 
                   return (
-                    <Grid item xs={4} sm={4} md={3} key={service.id}>
+                    <Grid item xs={6} sm={4} md={3} key={service.id}>
                       <Zoom in timeout={300 + index * 100}>
                         <Card
                           onClick={() => addLoad(service)}
@@ -470,11 +470,14 @@ export default function POS() {
                             cursor: "pointer",
                             background: getServiceGradient(index, service.name),
                             color: "white",
-                            borderRadius: { xs: 2, sm: 4 },
+                            borderRadius: { xs: 2, sm: 3 },
                             transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                             position: "relative",
                             overflow: "visible",
                             boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                            height: "100%",
+                            display: "flex",
+                            flexDirection: "column",
                             "&:hover": {
                               transform: "translateY(-8px) scale(1.02)",
                               boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
@@ -506,8 +509,12 @@ export default function POS() {
                           )}
                           <CardContent
                             sx={{
-                              p: { xs: 2, sm: 2.5 },
-                              "&:last-child": { pb: { xs: 2, sm: 2.5 } },
+                              p: { xs: 1.5, sm: 2 },
+                              "&:last-child": { pb: { xs: 1.5, sm: 2 } },
+                              flex: 1,
+                              display: "flex",
+                              flexDirection: "column",
+                              justifyContent: "center",
                             }}
                           >
                             <Box
@@ -516,15 +523,15 @@ export default function POS() {
                                 flexDirection: "column",
                                 alignItems: "center",
                                 textAlign: "center",
+                                gap: { xs: 0.5, sm: 1 },
                               }}
                             >
                               <Avatar
                                 sx={{
                                   bgcolor: "rgba(255,255,255,0.25)",
                                   backdropFilter: "blur(10px)",
-                                  mb: 1.5,
-                                  width: { xs: 48, sm: 56 },
-                                  height: { xs: 48, sm: 56 },
+                                  width: { xs: 40, sm: 50 },
+                                  height: { xs: 40, sm: 50 },
                                   boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                                 }}
                               >
@@ -533,10 +540,13 @@ export default function POS() {
                               <Typography
                                 sx={{
                                   fontWeight: 700,
-                                  fontSize: { xs: "0.8rem", sm: "0.95rem" },
-                                  lineHeight: 1.3,
-                                  mb: 1,
+                                  fontSize: { xs: "0.75rem", sm: "0.9rem" },
+                                  lineHeight: 1.2,
                                   textShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                                  minHeight: { xs: "32px", sm: "38px" },
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
                                 }}
                               >
                                 {service.name}
@@ -549,8 +559,8 @@ export default function POS() {
                                   backdropFilter: "blur(10px)",
                                   color: "white",
                                   fontWeight: 800,
-                                  fontSize: { xs: "0.75rem", sm: "0.9rem" },
-                                  height: 28,
+                                  fontSize: { xs: "0.7rem", sm: "0.85rem" },
+                                  height: { xs: 24, sm: 28 },
                                   boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                                 }}
                               />

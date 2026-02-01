@@ -635,7 +635,7 @@ export default function Inventory() {
         {inventory.map((item, index) => {
           const status = getStockStatus(item.quantity, item.type);
           return (
-            <Grid item xs={12} sm={6} lg={4} key={item.id}>
+            <Grid item xs={12} sm={6} md={4} lg={3} key={item.id}>
               <Zoom in timeout={300 + index * 100}>
                 <Card
                   elevation={0}
@@ -643,6 +643,9 @@ export default function Inventory() {
                     borderRadius: 4,
                     overflow: "hidden",
                     transition: "all 0.3s",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
                     border:
                       status.color === "error"
                         ? "3px solid #ef4444"

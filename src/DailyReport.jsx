@@ -675,7 +675,7 @@ export default function DailyReport() {
             icon: "🎉",
           },
         ].map((stat, index) => (
-          <Grid item xs={6} sm={3} key={stat.label}>
+          <Grid item xs={6} sm={6} md={3} key={stat.label}>
             <Zoom in timeout={300 + index * 100}>
               <Paper
                 elevation={0}
@@ -687,6 +687,10 @@ export default function DailyReport() {
                   borderRadius: 4,
                   boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
                   transition: "all 0.3s",
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
                   "&:hover": {
                     transform: "translateY(-8px)",
                     boxShadow: "0 16px 48px rgba(0,0,0,0.2)",

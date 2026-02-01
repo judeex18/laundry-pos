@@ -337,9 +337,9 @@ export default function OrderBoard() {
               Order Status Overview
             </Typography>
           </Box>
-          <Grid container spacing={{ xs: 1, sm: 2 }}>
+          <Grid container spacing={{ xs: 1, sm: 1.5 }}>
             {STATUSES.map((status, index) => (
-              <Grid item xs={4} sm={2.4} key={status}>
+              <Grid item xs={6} sm={2.4} key={status}>
                 <Zoom in timeout={300 + index * 100}>
                   <Paper
                     elevation={0}
@@ -351,6 +351,10 @@ export default function OrderBoard() {
                       borderRadius: 3,
                       boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
                       transition: "all 0.3s",
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
                       "&:hover": {
                         transform: "translateY(-4px)",
                         boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
@@ -428,7 +432,7 @@ export default function OrderBoard() {
       ) : (
         <Grid container spacing={{ xs: 1.5, sm: 2 }} justifyContent="center">
           {getPaginatedOrders().map((order, index) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} xl={3} key={order.id}>
+            <Grid item xs={12} sm={6} md={4} lg={3} key={order.id}>
               <Zoom in timeout={300 + index * 50}>
                 <Card
                   elevation={0}
@@ -443,6 +447,9 @@ export default function OrderBoard() {
                     boxShadow: isPaid(order)
                       ? "0 8px 32px rgba(16, 185, 129, 0.15)"
                       : "0 8px 32px rgba(239, 68, 68, 0.15)",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
                     "&:hover": {
                       transform: "translateY(-8px)",
                       boxShadow: isPaid(order)
@@ -972,7 +979,7 @@ export default function OrderBoard() {
             ) : (
               <Grid container spacing={{ xs: 1.5, sm: 2 }}>
                 {getFilteredReleasedOrders().map((order, index) => (
-                  <Grid item xs={12} sm={6} md={4} lg={3} xl={3} key={order.id}>
+                  <Grid item xs={12} sm={6} md={4} lg={3} key={order.id}>
                     <Zoom in timeout={300 + index * 50}>
                       <Card
                         elevation={0}
@@ -982,6 +989,9 @@ export default function OrderBoard() {
                             "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)",
                           border: "1px solid #86efac",
                           transition: "all 0.3s",
+                          height: "100%",
+                          display: "flex",
+                          flexDirection: "column",
                           "&:hover": {
                             transform: "translateY(-4px)",
                             boxShadow: "0 8px 24px rgba(16, 185, 129, 0.2)",
