@@ -147,7 +147,7 @@ export default function ReceiptPreview({
     }
 
     y += 1;
-    doc.text("================================", 28.5, y, { align: "center" });
+    doc.text("=================================", 28.5, y, { align: "center" });
     y += 4;
 
     // Total
@@ -190,7 +190,7 @@ export default function ReceiptPreview({
     }
 
     y += 2;
-    doc.text("================================", 28.5, y, { align: "center" });
+    doc.text("=================================", 28.5, y, { align: "center" });
     y += 4;
 
     // Footer
