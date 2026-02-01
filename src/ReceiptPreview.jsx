@@ -74,178 +74,281 @@ export default function ReceiptPreview({
   };
 
   const handleDownloadPDF = async () => {
-    const doc = new jsPDF({ unit: "mm", format: [58, 120] }); // Changed to 58mm width
-    let y = 3;
-    // Add logo from public folder
-    try {
-      const logoBase64 = await getBase64FromUrl("/IansLogo.png");
-      doc.addImage(logoBase64, "PNG", 2, y, 12, 12); // Logo moved to left edge
-      y += 14;
-    } catch (e) {
-      y += 2;
-    }
-    doc.setFontSize(10);
-    doc.text("Ian's Laundry Hub", 15, y, { align: "left" }); // Moved left instead of center
-    y += 4;
+    const doc = new jsPDF({ unit: "mm", format: [57, 120] });
+    let y = 5;
+
+    // Header - Shop Name
+    doc.setFontSize(12);
+    doc.setFont(undefined, "bold");
+    doc.text("Ian's Laundry Hub", 28.5, y, { align: "center" });
+    y += 5;
+
     doc.setFontSize(7);
-    doc.text(`Receipt #: ${data.receiptNumber || "-"}`, 2, y);
-    y += 3;
-    doc.text(`Customer: ${data.customer ? data.customer : "-"}`, 2, y);
-    y += 3;
-    doc.text(`Phone: ${data.phone ? data.phone : "-"}`, 2, y);
-    y += 3;
-    doc.text(`Date: ${data.date || new Date().toLocaleString()}`, 2, y);
+    doc.setFont(undefined, "normal");
+    doc.text("================================", 28.5, y, { align: "center" });
     y += 4;
-    doc.text("Items:", 2, y);
+
+    // Receipt Info
+    doc.text(`Receipt #: ${data.receiptNumber || "-"}`, 2, y);
+    y += 3.5;
+    doc.text(`Customer: ${data.customer ? data.customer : "-"}`, 2, y);
+    y += 3.5;
+    doc.text(`Phone: ${data.phone ? data.phone : "-"}`, 2, y);
+    y += 3.5;
+    const formattedDate = data.date || new Date().toLocaleString();
+    doc.text(`Date: ${formattedDate}`, 2, y);
+    y += 4;
+
+    doc.text("================================", 28.5, y, { align: "center" });
+    y += 4;
+
+    // Items Header
+    doc.setFont(undefined, "bold");
+    doc.text("Item", 2, y);
+    doc.text("Qty", 38, y);
+    doc.text("Total", 55, y, { align: "right" });
     y += 3;
+    doc.setFont(undefined, "normal");
+    doc.text("--------------------------------", 28.5, y, { align: "center" });
+    y += 3.5;
+
+    // Items
     if (Array.isArray(data.items) && data.items.length > 0) {
       data.items.forEach((item) => {
-        // Fit item name and price on one line, truncate if too long
         const itemName = (item.name || "Item").toString();
-        // Use item.loads for main service, item.qty for add-ons, fallback to 1
         const qty = item.loads || item.qty || 1;
-        // Show total for this item (price * qty)
         const itemTotal = (Number(item.price || 0) * qty).toFixed(2);
-        let line = `${itemName} x${qty}`;
-        // Limit item name to 10 chars for very tight 56mm paper
-        if (line.length > 10) line = line.slice(0, 10) + "…";
-        // Align price to the right, no peso sign
-        doc.text(line, 3, y, { maxWidth: 32 });
-        doc.text(`${itemTotal}`, 55, y, { align: "right" }); // Adjusted for 58mm width
-        y += 3;
+
+        // Item name (wrap if too long)
+        const maxWidth = 32;
+        const lines = doc.splitTextToSize(itemName, maxWidth);
+        doc.text(lines[0], 2, y);
+
+        // Qty and Total on same line
+        doc.text(`${qty}`, 38, y);
+        doc.text(`${itemTotal}`, 55, y, { align: "right" });
+        y += 3.5;
+
+        // Additional lines for long item names
+        if (lines.length > 1) {
+          for (let i = 1; i < lines.length; i++) {
+            doc.text(lines[i], 2, y);
+            y += 3.5;
+          }
+        }
       });
     } else {
-      doc.text("-", 3, y);
-      y += 3;
+      doc.text("No items", 2, y);
+      y += 3.5;
     }
+
     y += 1;
-    doc.line(2, y, 56, y); // Adjusted line length for 58mm width
-    y += 3;
-    // Payment section
-    const total = `${Number(data.total).toFixed(2)}`;
-    const received = `${amountPaid || data.amountPaid || "0.00"}`;
-    const changeStr = `${change.toFixed(2)}`;
+    doc.text("================================", 28.5, y, { align: "center" });
+    y += 4;
+
+    // Total
+    doc.setFont(undefined, "bold");
+    doc.setFontSize(9);
+    doc.text("TOTAL:", 2, y);
+    doc.text(`₱${Number(data.total).toFixed(2)}`, 55, y, { align: "right" });
+    y += 4;
+    doc.setFontSize(7);
+    doc.setFont(undefined, "normal");
+
+    // Payment details
     if (!isPaid) {
       doc.setTextColor(255, 0, 0);
-      doc.text("UNPAID", 2, y, { align: "left" }); // Moved to left instead of center
+      doc.setFont(undefined, "bold");
+      doc.text("*** UNPAID ***", 28.5, y, { align: "center" });
       doc.setTextColor(0, 0, 0);
-      y += 4;
-      doc.text(`Total: ${total}`, 3, y);
+      doc.setFont(undefined, "normal");
       y += 4;
     } else {
-      doc.text(`Total: ${total}`, 3, y);
-      y += 3;
       if ((paymentMethod || data.method) === "GCash") {
-        doc.text(`Payment: GCash`, 3, y);
-        y += 3;
+        doc.text(`Payment Method: GCash`, 2, y);
+        y += 3.5;
         doc.text(
           `GCash Ref: ${gcashRefNumber || data.gcashRefNumber || "-"}`,
-          3,
-          y
+          2,
+          y,
         );
-        y += 3;
+        y += 3.5;
       } else {
-        doc.text(`Received Amount: ${received}`, 3, y);
-        y += 3;
-        doc.text(`Change: ${changeStr}`, 3, y);
-        y += 3;
-        doc.text(`Payment: ${paymentMethod || data.method || "-"}`, 3, y);
-        y += 3;
+        doc.text(`Payment: ${paymentMethod || data.method || "-"}`, 2, y);
+        y += 3.5;
+        const received = amountPaid || data.amountPaid || "0.00";
+        doc.text(`Amount Paid: ₱${received}`, 2, y);
+        y += 3.5;
+        const changeAmount = Number(received) - Number(data.total);
+        doc.text(`Change: ₱${changeAmount.toFixed(2)}`, 2, y);
+        y += 3.5;
       }
     }
-    // Add extra space if near the bottom
-    if (y > 110) y = 115;
-    else y += 3;
-    doc.setFontSize(8);
-    doc.text("Thank you!", 2, y, { align: "left" }); // Moved to left instead of center
+
+    y += 2;
+    doc.text("================================", 28.5, y, { align: "center" });
+    y += 4;
+
+    // Footer
+    doc.setFont(undefined, "bold");
+    doc.text("Thank you for your business!", 28.5, y, { align: "center" });
+    y += 3.5;
+    doc.setFont(undefined, "normal");
+    doc.text("Please come again!", 28.5, y, { align: "center" });
+
     doc.save(`receipt_${data.receiptNumber || "order"}.pdf`);
   };
 
   const handlePrint = () => {
-    const printWindow = window.open("", "_blank", "width=400,height=600");
+    const printWindow = window.open("", "_blank", "width=220,height=600");
     const receiptHTML = `
       <html>
         <head>
           <title>Receipt - ${data.receiptNumber || "Order"}</title>
           <style>
+            @page {
+              size: 57mm 120mm;
+              margin: 0;
+            }
             body {
               font-family: 'Courier New', monospace;
-              font-size: 10px;
-              line-height: 1.2;
+              font-size: 9px;
+              line-height: 1.3;
               margin: 0;
-              padding: 5px;
-              width: 58mm;
-              margin: 0 auto;
+              padding: 3mm;
+              width: 57mm;
+              box-sizing: border-box;
             }
             .center { text-align: center; }
             .left { text-align: left; }
             .right { text-align: right; }
-            .item { margin: 2px 0; }
-            .line { border-top: 1px solid black; margin: 3px 0; }
-            .logo { font-size: 12px; font-weight: bold; }
+            .bold { font-weight: bold; }
+            .separator { 
+              border-top: 1px dashed #000; 
+              margin: 3px 0; 
+            }
+            .double-separator { 
+              border-top: 2px solid #000; 
+              margin: 3px 0; 
+            }
+            .header {
+              font-size: 12px;
+              font-weight: bold;
+              margin-bottom: 5px;
+            }
+            .item-row {
+              display: flex;
+              justify-content: space-between;
+              margin: 2px 0;
+            }
+            .item-name {
+              flex: 1;
+              padding-right: 5px;
+            }
+            .item-qty {
+              width: 25px;
+              text-align: center;
+            }
+            .item-total {
+              width: 45px;
+              text-align: right;
+            }
+            .total-section {
+              font-size: 10px;
+              font-weight: bold;
+              margin: 5px 0;
+            }
             @media print {
-              body { margin: 0; width: 58mm; }
+              body { 
+                margin: 0; 
+                width: 57mm;
+                padding: 3mm;
+              }
             }
           </style>
         </head>
         <body>
-          <div class="center">
-            <div class="logo">Ian's Laundry Hub</div>
-          </div>
+          <div class="center header">Ian's Laundry Hub</div>
+          <div class="center" style="font-size: 7px;">================================</div>
+          
           <div class="left">
             Receipt #: ${data.receiptNumber || "-"}<br>
             Customer: ${data.customer || "-"}<br>
             Phone: ${data.phone || "-"}<br>
             Date: ${data.date || new Date().toLocaleString()}
           </div>
-          <div class="line"></div>
-          <div>Items:</div>
+          
+          <div class="center" style="font-size: 7px;">================================</div>
+          
+          <div class="item-row bold" style="margin: 5px 0 2px 0;">
+            <div class="item-name">Item</div>
+            <div class="item-qty">Qty</div>
+            <div class="item-total">Total</div>
+          </div>
+          <div class="center" style="font-size: 7px; border-top: 1px dashed #000; margin: 2px 0;"></div>
+          
           ${
             Array.isArray(data.items) && data.items.length > 0
               ? data.items
                   .map((item) => {
                     const qty = item.loads || item.qty || 1;
                     const itemTotal = (Number(item.price || 0) * qty).toFixed(
-                      2
+                      2,
                     );
                     const itemName = (item.name || "Item").toString();
-                    const truncatedName =
-                      itemName.length > 10
-                        ? itemName.slice(0, 10) + "…"
-                        : itemName;
-                    return `<div class="item">${truncatedName} x${qty}<span class="right">${itemTotal}</span></div>`;
+                    return `
+                      <div class="item-row">
+                        <div class="item-name">${itemName}</div>
+                        <div class="item-qty">${qty}</div>
+                        <div class="item-total">₱${itemTotal}</div>
+                      </div>
+                    `;
                   })
                   .join("")
-              : "<div>-</div>"
+              : '<div class="left">No items</div>'
           }
-          <div class="line"></div>
-          <div>Total: <span class="right">${Number(data.total).toFixed(
-            2
-          )}</span></div>
+          
+          <div class="center" style="font-size: 7px;">====================================</div>
+          
+          <div class="item-row total-section">
+            <div>TOTAL:</div>
+            <div>₱${Number(data.total).toFixed(2)}</div>
+          </div>
+          
+          <div class="separator"></div>
+          
           ${
             isPaid
               ? `
-            <div>Payment: ${data.method || "-"}</div>
-            ${
-              data.method !== "GCash"
-                ? `
-              <div>Received: ${data.amountPaid || "0.00"}</div>
-              <div>Change: ${data.change || "0.00"}</div>
-            `
-                : `
-              <div>GCash Ref: ${data.gcashRefNumber || "-"}</div>
-            `
-            }
+            <div class="left">
+              Payment: ${data.method || "-"}<br>
+              ${
+                data.method !== "GCash"
+                  ? `
+                Amount Paid: ₱${data.amountPaid || "0.00"}<br>
+                Change: ₱${data.change || "0.00"}
+              `
+                  : `
+                GCash Ref: ${data.gcashRefNumber || "-"}
+              `
+              }
+            </div>
           `
-              : '<div style="color: red; font-weight: bold;">UNPAID</div>'
+              : '<div class="center bold" style="color: #000; margin: 5px 0;">*** UNPAID ***</div>'
           }
-          <div class="center" style="margin-top: 8px;">Thank you!</div>
+          
+          <div class="center" style="font-size: 7px; margin-top: 5px;">====================================</div>
+          
+          <div class="center bold" style="margin-top: 5px;">Thank you for choosing Ian's Laundry Hub!</div>
+          <div class="center" style="font-size: 8px;">Please drop with us again!</div>
         </body>
       </html>
     `;
     printWindow.document.write(receiptHTML);
     printWindow.document.close();
-    printWindow.print();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
   };
 
   const handlePayment = () => {
