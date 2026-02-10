@@ -169,6 +169,8 @@ export const getOrders = async () => {
     createdAt: order.created_at,
     gcashNumber: order.gcash_number,
     gcashRefNumber: order.gcash_ref_number,
+    amountPaid: order.amount_paid,
+    change: order.change,
   }));
 };
 
@@ -190,6 +192,8 @@ export const getOrdersByStatus = async (status) => {
     createdAt: order.created_at,
     gcashNumber: order.gcash_number,
     gcashRefNumber: order.gcash_ref_number,
+    amountPaid: order.amount_paid,
+    change: order.change,
   }));
 };
 
