@@ -279,9 +279,9 @@ export default function ReceiptPreview({
           
           <div class="left">
             <strong style="font-size: 10px;">Receipt #: ${data.receiptNumber || "-"}</strong><br>
-            Customer: ${data.customer || "-"}<br>
-            Phone: ${data.phone || "-"}<br>
-            Date: ${data.date || new Date().toLocaleString()}
+            <strong>Customer: ${data.customer || "-"}</strong><br>
+            <strong>Phone: ${data.phone || "-"}</strong><br>
+            <strong>Date: ${data.date || new Date().toLocaleString()}</strong>
           </div>
           
           <div class="center" style="font-size: 7px;">================================</div>
@@ -304,7 +304,7 @@ export default function ReceiptPreview({
                     const itemName = (item.name || "Item").toString();
                     return `
                       <div class="item-row">
-                        <div class="item-name">${itemName}</div>
+                        <div class="item-name"><strong>${itemName}</strong></div>
                         <div class="item-qty">${qty}</div>
                         <div class="item-total">₱${itemTotal}</div>
                       </div>
@@ -327,7 +327,7 @@ export default function ReceiptPreview({
             isPaid
               ? `
             <div class="left">
-              Payment: ${data.method || "-"}<br>
+              <strong>Payment: ${data.method || "-"}</strong><br>
               ${
                 data.method !== "GCash"
                   ? `
@@ -335,7 +335,7 @@ export default function ReceiptPreview({
                 Change: ₱${data.change || "0.00"}
               `
                   : `
-                GCash Ref: ${data.gcashRefNumber || "-"}
+                <strong>GCash Ref: ${data.gcashRefNumber || "-"}</strong>
               `
               }
             </div>
@@ -346,7 +346,7 @@ export default function ReceiptPreview({
           <div class="center" style="font-size: 7px; margin-top: 5px;">====================================</div>
           
           <div class="center bold" style="margin-top: 5px;">Thank you for choosing Ian's Laundry Hub!</div>
-          <div class="center" style="font-size: 8px;">Please drop with us again!</div>
+          <div class="center bold" style="font-size: 8px;">Please drop with us again!</div>
         </body>
       </html>
     `;
