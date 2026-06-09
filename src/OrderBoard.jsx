@@ -785,9 +785,14 @@ export default function OrderBoard() {
                         const filteredStatuses = STATUSES.filter(
                           (s) => !getSkippedStatuses(order).includes(s),
                         );
-                        const isCurrentOrPast =
-                          filteredStatuses.indexOf(status) <=
-                          filteredStatuses.indexOf(order.status);
+                        const currentStatusIndex = filteredStatuses.indexOf(
+                          order.status,
+                        );
+                        const buttonStatusIndex =
+                          filteredStatuses.indexOf(status);
+                        const isNextStatus =
+                          buttonStatusIndex === currentStatusIndex + 1;
+                        const isCurrentStatus = status === order.status;
                         const cantReleaseUnpaid =
                           status === "Released" && !isPaid(order);
 
@@ -800,7 +805,7 @@ export default function OrderBoard() {
                             size="small"
                             onClick={() => handleUpdateStatus(order, status)}
                             disabled={
-                              (isCurrentOrPast && status !== order.status) ||
+                              !(isCurrentStatus || isNextStatus) ||
                               cantReleaseUnpaid
                             }
                             startIcon={
